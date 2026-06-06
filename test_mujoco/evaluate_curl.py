@@ -5,6 +5,18 @@ from pathlib import Path
 import numpy as np
 
 from env import QuadrupedFoldEnv
+from policy_search import CurlPolicyParams, make_action
+
+
+SCRIPTED_PARAMS = CurlPolicyParams(
+    torso=-0.03,
+    front_hip=-0.015,
+    front_knee=0.025,
+    hind_hip=-0.025,
+    hind_knee=0.0,
+    switch_step=40,
+    release_step=160,
+)
 
 
 def _load_policy(model_path, norm_path):
@@ -24,7 +36,7 @@ def _torso_up(env):
     return float(1.0 - 2.0 * (quat[1] ** 2 + quat[2] ** 2))
 
 
-def evaluate_random_or_zero(policy_name, episodes):
+def evaluate_open_loop(policy_name, episodes):
     env = QuadrupedFoldEnv()
     rows = []
     for ep in range(episodes):
@@ -37,6 +49,8 @@ def evaluate_random_or_zero(policy_name, episodes):
         for step in range(env.max_episode_steps):
             if policy_name == "random":
                 action = env.action_space.sample()
+            elif policy_name == "scripted":
+                action = make_action(env, SCRIPTED_PARAMS, step)
             else:
                 action = np.zeros(env.action_space.shape, dtype=np.float32)
             _, reward, terminated, truncated, _ = env.step(action)
@@ -88,7 +102,7 @@ def print_rows(rows):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--policy", choices=["zero", "random", "model"], default="zero")
+    parser.add_argument("--policy", choices=["zero", "random", "scripted", "model"], default="zero")
     parser.add_argument("--model", type=Path)
     parser.add_argument("--norm", type=Path)
     parser.add_argument("--episodes", type=int, default=5)
@@ -99,7 +113,7 @@ def main():
             raise SystemExit("--model is required for --policy model")
         rows = evaluate_model(args.model, args.norm, args.episodes)
     else:
-        rows = evaluate_random_or_zero(args.policy, args.episodes)
+        rows = evaluate_open_loop(args.policy, args.episodes)
     print_rows(rows)
 
 
