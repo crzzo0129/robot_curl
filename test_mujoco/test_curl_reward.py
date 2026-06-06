@@ -53,3 +53,28 @@ def test_foot_contact_observation_reports_named_feet():
 
     assert contacts.shape == (4,)
     assert np.all(contacts == 1.0)
+
+
+def test_joint_torques_are_limited():
+    env = QuadrupedFoldEnv()
+    env.reset(seed=4)
+
+    env.target_q[:] = env.jnt_high
+    env._apply_pd()
+
+    for i, name in enumerate(JOINT_NAMES):
+        torque = env.data.qfrc_applied[env.dof_addr[name]]
+        assert abs(torque) <= env.torque_limits[i] + 1e-6
+
+
+def test_overcurl_is_not_more_rewarding_than_goal_curl():
+    env = QuadrupedFoldEnv()
+    env.reset(seed=5)
+
+    _set_joint(env, "torso_hinge", -env.curl_goal)
+    goal_reward = env._compute_reward(np.zeros(env.action_space.shape, dtype=np.float32))
+
+    _set_joint(env, "torso_hinge", -(env.curl_goal + 0.5))
+    overcurl_reward = env._compute_reward(np.zeros(env.action_space.shape, dtype=np.float32))
+
+    assert overcurl_reward <= goal_reward

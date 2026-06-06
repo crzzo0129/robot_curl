@@ -1,0 +1,107 @@
+"""Headless evaluation metrics for the robot-curl policy."""
+import argparse
+from pathlib import Path
+
+import numpy as np
+
+from env import QuadrupedFoldEnv
+
+
+def _load_policy(model_path, norm_path):
+    from stable_baselines3 import PPO
+    from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+
+    env = DummyVecEnv([lambda: QuadrupedFoldEnv()])
+    if norm_path and norm_path.exists():
+        env = VecNormalize.load(norm_path, env)
+        env.training = False
+        env.norm_reward = False
+    return PPO.load(model_path), env
+
+
+def _torso_up(env):
+    quat = env.data.xquat[env.torso_id]
+    return float(1.0 - 2.0 * (quat[1] ** 2 + quat[2] ** 2))
+
+
+def evaluate_random_or_zero(policy_name, episodes):
+    env = QuadrupedFoldEnv()
+    rows = []
+    for ep in range(episodes):
+        env.reset(seed=ep)
+        total_reward = 0.0
+        max_curl = 0.0
+        min_up = 1.0
+        contacts = []
+        terminated = truncated = False
+        for step in range(env.max_episode_steps):
+            if policy_name == "random":
+                action = env.action_space.sample()
+            else:
+                action = np.zeros(env.action_space.shape, dtype=np.float32)
+            _, reward, terminated, truncated, _ = env.step(action)
+            total_reward += reward
+            max_curl = max(max_curl, env._curl_amount())
+            min_up = min(min_up, _torso_up(env))
+            contacts.append(float(np.sum(env._foot_contacts())))
+            if terminated or truncated:
+                break
+        rows.append((ep, step + 1, total_reward, max_curl, env.data.xpos[env.torso_id][2], min_up, np.mean(contacts), terminated))
+    return rows
+
+
+def evaluate_model(model_path, norm_path, episodes):
+    model, vec_env = _load_policy(model_path, norm_path)
+    base_env = vec_env.envs[0]
+    rows = []
+    for ep in range(episodes):
+        obs = vec_env.reset()
+        total_reward = 0.0
+        max_curl = 0.0
+        min_up = 1.0
+        contacts = []
+        done = [False]
+        for step in range(base_env.max_episode_steps):
+            action, _ = model.predict(obs, deterministic=True)
+            obs, reward, done, _ = vec_env.step(action)
+            total_reward += float(reward[0])
+            max_curl = max(max_curl, base_env._curl_amount())
+            min_up = min(min_up, _torso_up(base_env))
+            contacts.append(float(np.sum(base_env._foot_contacts())))
+            if done[0]:
+                break
+        rows.append((ep, step + 1, total_reward, max_curl, base_env.data.xpos[base_env.torso_id][2], min_up, np.mean(contacts), bool(done[0])))
+    return rows
+
+
+def print_rows(rows):
+    print("ep,steps,total_reward,max_curl,final_z,min_up,mean_contacts,done")
+    for row in rows:
+        print(f"{row[0]},{row[1]},{row[2]:.3f},{row[3]:.3f},{row[4]:.3f},{row[5]:.3f},{row[6]:.3f},{row[7]}")
+    arr = np.array([[r[1], r[2], r[3], r[4], r[5], r[6], float(r[7])] for r in rows], dtype=float)
+    print(
+        "mean,"
+        f"{arr[:,0].mean():.1f},{arr[:,1].mean():.3f},{arr[:,2].mean():.3f},"
+        f"{arr[:,3].mean():.3f},{arr[:,4].mean():.3f},{arr[:,5].mean():.3f},{arr[:,6].mean():.3f}"
+    )
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--policy", choices=["zero", "random", "model"], default="zero")
+    parser.add_argument("--model", type=Path)
+    parser.add_argument("--norm", type=Path)
+    parser.add_argument("--episodes", type=int, default=5)
+    args = parser.parse_args()
+
+    if args.policy == "model":
+        if args.model is None:
+            raise SystemExit("--model is required for --policy model")
+        rows = evaluate_model(args.model, args.norm, args.episodes)
+    else:
+        rows = evaluate_random_or_zero(args.policy, args.episodes)
+    print_rows(rows)
+
+
+if __name__ == "__main__":
+    main()

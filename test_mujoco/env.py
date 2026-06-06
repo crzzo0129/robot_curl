@@ -111,6 +111,13 @@ class QuadrupedFoldEnv(Env):
             1.0, 1.5, 1.0,     # hl
             1.0, 1.5, 1.0,     # hr
         ])
+        self.torque_limits = np.array([
+            25.0,               # torso_hinge
+            12.0, 16.0, 12.0,   # fl
+            12.0, 16.0, 12.0,   # fr
+            12.0, 16.0, 12.0,   # hl
+            12.0, 16.0, 12.0,   # hr
+        ])
 
         # 当前目标位置（在 reset/step 中更新）
         self.target_q = self.stand_pose.copy()
@@ -175,6 +182,7 @@ class QuadrupedFoldEnv(Env):
             qvel = self.data.qvel[self.dof_addr[name]]
             error = self.target_q[i] - q
             torque = self.Kp[i] * error - self.Kd[i] * qvel
+            torque = np.clip(torque, -self.torque_limits[i], self.torque_limits[i])
             self.data.qfrc_applied[self.dof_addr[name]] = torque
 
     def _get_obs(self):
@@ -203,7 +211,9 @@ class QuadrupedFoldEnv(Env):
 
     def _compute_reward(self, action):
         curl = self._curl_amount()
-        curl_progress = max(0.0, curl - self.init_curl)
+        effective_curl = min(curl, self.curl_goal)
+        curl_progress = max(0.0, effective_curl - self.init_curl)
+        overcurl = max(0.0, curl - self.curl_goal)
         r_curl = 3.0 * min(curl, self.curl_goal) / self.curl_goal
         r_progress = 2.0 * curl_progress
 
@@ -229,7 +239,7 @@ class QuadrupedFoldEnv(Env):
 
         r_alive = 0.05
 
-        reward = r_curl + r_progress + r_tier + r_contact + 0.03 * r_smooth + 0.02 * r_stable + r_upright + r_alive
+        reward = r_curl + r_progress + r_tier + r_contact + 0.03 * r_smooth + 0.02 * r_stable + r_upright + r_alive - 3.0 * overcurl
         return reward
 
     def _is_terminated(self):
