@@ -28,6 +28,16 @@ CLOSED_LOOP_PARAMS = CurlPolicyParams(
     release_step=160,
 )
 
+CEM_PARAMS = CurlPolicyParams(
+    torso=-0.0376,
+    front_hip=0.0114,
+    front_knee=0.0271,
+    hind_hip=-0.0264,
+    hind_knee=0.0190,
+    switch_step=48,
+    release_step=168,
+)
+
 
 def _load_policy(model_path, norm_path):
     from stable_baselines3 import PPO
@@ -63,6 +73,8 @@ def evaluate_open_loop(policy_name, episodes):
                 action = make_action(env, SCRIPTED_PARAMS, step)
             elif policy_name == "closed_loop":
                 action = make_closed_loop_action(env, CLOSED_LOOP_PARAMS, step)
+            elif policy_name == "cem":
+                action = make_closed_loop_action(env, CEM_PARAMS, step)
             else:
                 action = np.zeros(env.action_space.shape, dtype=np.float32)
             _, reward, terminated, truncated, _ = env.step(action)
@@ -114,7 +126,7 @@ def print_rows(rows):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--policy", choices=["zero", "random", "scripted", "closed_loop", "model"], default="zero")
+    parser.add_argument("--policy", choices=["zero", "random", "scripted", "closed_loop", "cem", "model"], default="zero")
     parser.add_argument("--model", type=Path)
     parser.add_argument("--norm", type=Path)
     parser.add_argument("--episodes", type=int, default=5)

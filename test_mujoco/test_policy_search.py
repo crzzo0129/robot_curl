@@ -37,6 +37,13 @@ def test_score_row_prefers_curl_without_falling():
     assert score_row(stable_curled) > score_row(stable_flat)
 
 
+def test_score_row_prioritizes_more_stable_curl_over_extra_reward():
+    less_curl_more_reward = {"max_curl": 0.20, "total_reward": 600.0, "done": False, "min_up": 0.99}
+    more_curl_less_reward = {"max_curl": 0.26, "total_reward": 450.0, "done": False, "min_up": 0.99}
+
+    assert score_row(more_curl_less_reward) > score_row(less_curl_more_reward)
+
+
 def test_closed_loop_policy_reduces_curl_action_near_goal():
     env = QuadrupedFoldEnv()
     env.reset(seed=6)

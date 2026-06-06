@@ -104,7 +104,7 @@ def score_row(row):
     fall_penalty = 200.0 if row["done"] else 0.0
     low_up_penalty = 50.0 * max(0.0, 0.85 - row["min_up"])
     flat_penalty = 120.0 * max(0.0, 0.12 - row["max_curl"])
-    return 500.0 * row["max_curl"] + 0.2 * row["total_reward"] - fall_penalty - low_up_penalty - flat_penalty
+    return 1000.0 * row["max_curl"] + 0.05 * row["total_reward"] - fall_penalty - low_up_penalty - flat_penalty
 
 
 def iter_grid(limit):
