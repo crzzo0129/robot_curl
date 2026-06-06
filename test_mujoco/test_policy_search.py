@@ -1,7 +1,7 @@
 import numpy as np
 
 from env import QuadrupedFoldEnv
-from policy_search import CurlPolicyParams, make_action, score_row
+from policy_search import CurlPolicyParams, make_action, make_closed_loop_action, score_row
 
 
 def test_make_action_uses_torso_and_leg_adjustment_windows():
@@ -35,3 +35,31 @@ def test_score_row_prefers_curl_without_falling():
 
     assert score_row(stable_curled) > score_row(fallen_curled)
     assert score_row(stable_curled) > score_row(stable_flat)
+
+
+def test_closed_loop_policy_reduces_curl_action_near_goal():
+    env = QuadrupedFoldEnv()
+    env.reset(seed=6)
+    for _ in range(50):
+        env.step(np.zeros(env.action_space.shape, dtype=np.float32))
+    params = CurlPolicyParams(-0.03, -0.015, 0.025, -0.025, 0.0, 40, 160)
+
+    env.data.qpos[env.qpos_addr["torso_hinge"]] = -0.05
+    early = make_closed_loop_action(env, params, 30)
+
+    env.data.qpos[env.qpos_addr["torso_hinge"]] = -env.curl_goal
+    near_goal = make_closed_loop_action(env, params, 30)
+
+    assert early[0] < near_goal[0]
+    assert near_goal[0] == 0.0
+
+
+def test_closed_loop_policy_is_conservative_with_low_contacts():
+    env = QuadrupedFoldEnv()
+    env.reset(seed=7)
+    params = CurlPolicyParams(-0.03, -0.015, 0.025, -0.025, 0.0, 40, 160)
+
+    env.foot_geom_ids = []
+    action = make_closed_loop_action(env, params, 30)
+
+    assert action[0] == 0.0

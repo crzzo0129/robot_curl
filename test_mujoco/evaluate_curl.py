@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 
 from env import QuadrupedFoldEnv
-from policy_search import CurlPolicyParams, make_action
+from policy_search import CurlPolicyParams, make_action, make_closed_loop_action
 
 
 SCRIPTED_PARAMS = CurlPolicyParams(
@@ -13,6 +13,16 @@ SCRIPTED_PARAMS = CurlPolicyParams(
     front_hip=-0.015,
     front_knee=0.025,
     hind_hip=-0.025,
+    hind_knee=0.0,
+    switch_step=40,
+    release_step=160,
+)
+
+CLOSED_LOOP_PARAMS = CurlPolicyParams(
+    torso=-0.02,
+    front_hip=-0.02,
+    front_knee=0.04,
+    hind_hip=-0.02,
     hind_knee=0.0,
     switch_step=40,
     release_step=160,
@@ -51,6 +61,8 @@ def evaluate_open_loop(policy_name, episodes):
                 action = env.action_space.sample()
             elif policy_name == "scripted":
                 action = make_action(env, SCRIPTED_PARAMS, step)
+            elif policy_name == "closed_loop":
+                action = make_closed_loop_action(env, CLOSED_LOOP_PARAMS, step)
             else:
                 action = np.zeros(env.action_space.shape, dtype=np.float32)
             _, reward, terminated, truncated, _ = env.step(action)
@@ -102,7 +114,7 @@ def print_rows(rows):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--policy", choices=["zero", "random", "scripted", "model"], default="zero")
+    parser.add_argument("--policy", choices=["zero", "random", "scripted", "closed_loop", "model"], default="zero")
     parser.add_argument("--model", type=Path)
     parser.add_argument("--norm", type=Path)
     parser.add_argument("--episodes", type=int, default=5)

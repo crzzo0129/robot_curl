@@ -10,14 +10,17 @@ From the repository root:
 python -m pip install -r requirements.txt
 python test_mujoco\evaluate_curl.py --policy zero --episodes 3
 python test_mujoco\evaluate_curl.py --policy scripted --episodes 5
+python test_mujoco\evaluate_curl.py --policy closed_loop --episodes 5
 python test_mujoco\policy_search.py --limit 80 --episodes 2
+python test_mujoco\policy_search.py --limit 80 --episodes 2 --closed-loop
 ```
 
-The `scripted` policy is not the final controller. It is a reproducible open-loop baseline found by grid search. Current baseline target:
+The `scripted` and `closed_loop` policies are not the final controller. They are reproducible baselines found by grid search. Current closed-loop baseline:
 
 - stable 250-step episodes
-- maximum torso curl around `0.22 rad`
+- maximum torso curl around `0.23 rad`
 - upright torso (`min_up` near `0.99`)
+- mean foot contacts around `3.5`
 
 PPO experiments can start with:
 

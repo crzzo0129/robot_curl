@@ -40,12 +40,23 @@ def make_action(env, params, step):
     return np.clip(action, env.action_space.low, env.action_space.high)
 
 
+def make_closed_loop_action(env, params, step):
+    action = make_action(env, params, step)
+    curl = env._curl_amount()
+    contact_count = float(np.sum(env._foot_contacts()))
+    if curl >= env.curl_goal or contact_count < 2.0:
+        action[0] = 0.0
+    elif curl > 0.75 * env.curl_goal:
+        action[0] = 0.5 * params.torso
+    return np.clip(action, env.action_space.low, env.action_space.high)
+
+
 def _torso_up(env):
     quat = env.data.xquat[env.torso_id]
     return float(1.0 - 2.0 * (quat[1] ** 2 + quat[2] ** 2))
 
 
-def evaluate_params(params, episodes):
+def evaluate_params(params, episodes, closed_loop=False):
     rows = []
     for seed in range(episodes):
         env = QuadrupedFoldEnv()
@@ -56,7 +67,10 @@ def evaluate_params(params, episodes):
         contacts = []
         done = False
         for step in range(env.max_episode_steps):
-            action = make_action(env, params, step)
+            if closed_loop:
+                action = make_closed_loop_action(env, params, step)
+            else:
+                action = make_action(env, params, step)
             _, reward, terminated, truncated, _ = env.step(action)
             total_reward += float(reward)
             max_curl = max(max_curl, env._curl_amount())
@@ -81,6 +95,7 @@ def evaluate_params(params, episodes):
         result[key] = float(np.mean([row[key] for row in rows]))
     result["done"] = float(np.mean([row["done"] for row in rows]))
     result.update(asdict(params))
+    result["closed_loop"] = float(closed_loop)
     result["score"] = score_row(result)
     return result
 
@@ -128,12 +143,13 @@ def main():
     parser.add_argument("--limit", type=int, default=80)
     parser.add_argument("--out", type=Path, default=Path("quick_runs/policy_search.csv"))
     parser.add_argument("--top", type=int, default=10)
+    parser.add_argument("--closed-loop", action="store_true")
     args = parser.parse_args()
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     rows = []
     for params in iter_grid(args.limit):
-        row = evaluate_params(params, args.episodes)
+        row = evaluate_params(params, args.episodes, closed_loop=args.closed_loop)
         rows.append(row)
     rows.sort(key=score_row, reverse=True)
 
