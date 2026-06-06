@@ -1,0 +1,28 @@
+<mujoco model="pendulum">
+  <compiler angle="degree"/>
+
+  <option integrator="RK4" timestep="0.001"/>
+
+  <worldbody>
+    <light diffuse=".8 .8 .8" dir="0 -1 -.5" pos="0 2 2"/>
+
+    <!-- base 固定，不放 joint -->
+    <body name="base" pos="0 0 2">
+      <geom type="sphere" size="0.06" rgba=".7 .7 .7 1"/>
+
+      <!-- upper_arm 是子 body，joint 放这里：upper_arm 绕 base 转动 -->
+      <body name="upper_arm" pos="0 0 0">
+        <joint name="shoulder" type="hinge" axis="0 1 0"/>
+        <geom type="box" size="0.03 0.03 0.15" pos="0 0 -0.15" rgba="1 0 0 1"/>
+        <geom type="sphere" size="0.04" pos="0 0 -0.3" rgba="1 .2 .2 1"/>
+
+        <!-- forearm 是 upper_arm 的子 body -->
+        <body name="forearm" pos="0 0 -0.3">
+          <joint name="elbow" type="hinge" axis="0 1 0"/>
+          <geom type="box" size="0.03 0.03 0.12" pos="0 0 -0.12" rgba="0 0 1 1"/>
+          <geom type="sphere" size="0.04" pos="0 0 -0.25" rgba=".2 .2 1 1"/>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>
