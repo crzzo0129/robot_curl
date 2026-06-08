@@ -64,4 +64,15 @@ Cloud-oriented SB3 training can start with:
 python -m scripts.cloud_train --steps 2000000 --envs 32 --device cuda --curl-goal 0.20
 ```
 
+## MJX Backend Smoke Test
+
+The MJX backend is separate from the Gymnasium environment while parity is being checked. On the cloud machine:
+
+```bash
+conda activate mjx312
+python -m robot_curl_mjx.smoke_test --steps 10 --curl-goal 0.20
+```
+
+Expected output includes the JAX backend, observation shape, action size, final reward, and termination flags. This smoke test only verifies MJX model loading and stepping; MJX PPO training is the next layer.
+
 Training artifacts are intentionally ignored by git under `quick_runs/`, `ppo_logs/`, and `ppo_models/`.
