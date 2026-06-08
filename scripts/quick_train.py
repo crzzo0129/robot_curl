@@ -5,11 +5,12 @@ from pathlib import Path
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
+from robot_curl.config_args import add_task_config_args, task_config_from_args
 from robot_curl.env import QuadrupedFoldEnv
 
 
-def make_env():
-    return QuadrupedFoldEnv()
+def make_env(config):
+    return QuadrupedFoldEnv(config=config)
 
 
 def main():
@@ -19,11 +20,13 @@ def main():
     parser.add_argument("--out", type=Path, default=Path("quick_runs/curl_smoke"))
     parser.add_argument("--n-steps", type=int, default=512)
     parser.add_argument("--batch-size", type=int, default=64)
+    add_task_config_args(parser)
     args = parser.parse_args()
+    task_config = task_config_from_args(args)
 
     args.out.mkdir(parents=True, exist_ok=True)
 
-    env = DummyVecEnv([make_env])
+    env = DummyVecEnv([lambda: make_env(task_config)])
     env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=10.0)
 
     model = PPO(

@@ -1,5 +1,5 @@
 """Robot curl simulation package."""
 
-from robot_curl.env import JOINT_NAMES, QuadrupedFoldEnv
+from robot_curl.env import CurlTaskConfig, JOINT_NAMES, QuadrupedFoldEnv
 
-__all__ = ["JOINT_NAMES", "QuadrupedFoldEnv"]
+__all__ = ["CurlTaskConfig", "JOINT_NAMES", "QuadrupedFoldEnv"]

@@ -1,47 +1,52 @@
-"""四足折叠 PPO 训练脚本。"""
-import os
+"""Standard PPO training entrypoint for robot curl."""
+import argparse
+from pathlib import Path
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+
+from robot_curl.config_args import add_task_config_args, task_config_from_args
 from robot_curl.env import QuadrupedFoldEnv
 
-NUM_ENVS = 4
-TOTAL_TIMESTEPS = 1_000_000
-LOG_DIR = "./ppo_logs"
-MODEL_DIR = "./ppo_models"
 
-os.makedirs(LOG_DIR, exist_ok=True)
-os.makedirs(MODEL_DIR, exist_ok=True)
+def make_env(config):
+    return QuadrupedFoldEnv(config=config)
 
 
-def make_env():
-    return QuadrupedFoldEnv()
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--steps", type=int, default=1_000_000)
+    parser.add_argument("--envs", type=int, default=4)
+    parser.add_argument("--device", type=str, default="cpu")
+    parser.add_argument("--out", type=Path, default=Path("ppo_models"))
+    parser.add_argument("--log-dir", type=Path, default=Path("ppo_logs"))
+    add_task_config_args(parser)
+    args = parser.parse_args()
+    task_config = task_config_from_args(args)
 
+    args.out.mkdir(parents=True, exist_ok=True)
+    args.log_dir.mkdir(parents=True, exist_ok=True)
 
-if __name__ == "__main__":
-    print(f"创建 {NUM_ENVS} 个并行环境...")
-    env = DummyVecEnv([make_env for _ in range(NUM_ENVS)])
+    env = DummyVecEnv([lambda config=task_config: make_env(config) for _ in range(args.envs)])
     env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=10.0)
 
-    eval_env = DummyVecEnv([make_env])
+    eval_env = DummyVecEnv([lambda config=task_config: make_env(config)])
     eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=True, training=False)
 
-    # 回调
     checkpoint_callback = CheckpointCallback(
-        save_freq=100_000 // NUM_ENVS,
-        save_path=MODEL_DIR,
-        name_prefix="quad_fold",
+        save_freq=max(100_000 // args.envs, 1),
+        save_path=str(args.out),
+        name_prefix="robot_curl",
     )
     eval_callback = EvalCallback(
         eval_env,
-        best_model_save_path=MODEL_DIR,
-        log_path=LOG_DIR,
-        eval_freq=50_000 // NUM_ENVS,
+        best_model_save_path=str(args.out),
+        log_path=str(args.log_dir),
+        eval_freq=max(50_000 // args.envs, 1),
         deterministic=True,
     )
 
-    print("开始训练 PPO...")
     model = PPO(
         "MlpPolicy",
         env,
@@ -54,18 +59,15 @@ if __name__ == "__main__":
         gae_lambda=0.95,
         clip_range=0.2,
         ent_coef=0.01,
-        tensorboard_log=LOG_DIR,
-        device="cpu",
+        tensorboard_log=str(args.log_dir),
+        device=args.device,
     )
 
-    model.learn(
-        total_timesteps=TOTAL_TIMESTEPS,
-        callback=[checkpoint_callback, eval_callback],
-        progress_bar=True,
-    )
+    model.learn(total_timesteps=args.steps, callback=[checkpoint_callback, eval_callback], progress_bar=True)
+    model.save(args.out / "robot_curl_final")
+    env.save(args.out / "vec_normalize.pkl")
+    print(f"saved {args.out}")
 
-    # 保存最终模型
-    final_path = os.path.join(MODEL_DIR, "quad_fold_final")
-    model.save(final_path)
-    env.save(os.path.join(MODEL_DIR, "vec_normalize.pkl"))
-    print(f"模型已保存至 {final_path}")
+
+if __name__ == "__main__":
+    main()

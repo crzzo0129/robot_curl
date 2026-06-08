@@ -1,4 +1,5 @@
 """四足折叠环境：Gymnasium Env，PPO 训练用。"""
+from dataclasses import dataclass
 from pathlib import Path
 import numpy as np
 import mujoco
@@ -20,6 +21,30 @@ JOINT_NAMES = [
 N_JOINTS = len(JOINT_NAMES)  # 13
 
 # 关节限位（通过 model 读取）
+@dataclass(frozen=True)
+class CurlTaskConfig:
+    curl_goal: float = 0.45
+    max_episode_steps: int = 250
+    action_repeat: int = 20
+    action_scale: float = 0.1
+    reward_curl: float = 3.0
+    reward_progress: float = 2.0
+    reward_tier: float = 0.5
+    curl_tiers: tuple[float, ...] = (0.10, 0.20, 0.30, 0.40)
+    reward_contact: float = 0.15
+    reward_low_contact: float = 0.25
+    min_contacts: float = 2.0
+    contact_cap: float = 3.0
+    reward_smooth: float = 0.03
+    reward_stable: float = 0.02
+    reward_upright: float = 4.0
+    upright_threshold: float = 0.9
+    reward_alive: float = 0.05
+    penalty_overcurl: float = 3.0
+    terminate_upright: float = 0.3
+    terminate_height: float = 0.05
+
+
 def _get_joint_limits(model):
     low, high = [], []
     for name in JOINT_NAMES:
@@ -44,16 +69,17 @@ class QuadrupedFoldEnv(Env):
         实际目标 = clip(当前目标 + action, joint_limit_low, joint_limit_high)
     """
 
-    def __init__(self, render_mode=None):
+    def __init__(self, render_mode=None, config=None):
         super().__init__()
+        self.config = config or CurlTaskConfig()
 
         self.model = mujoco.MjModel.from_xml_path(str(_XML_PATH))
         self.data = mujoco.MjData(self.model)
         self.dt = self.model.opt.timestep  # 物理步长
 
         # 控制频率：每 N 个物理步发一次动作
-        self.action_repeat = 20  # 20 * 0.001s = 0.02s, 50Hz
-        self.max_episode_steps = 250  # 250 * 0.02s = 5s
+        self.action_repeat = self.config.action_repeat  # 20 * 0.001s = 0.02s, 50Hz
+        self.max_episode_steps = self.config.max_episode_steps  # 250 * 0.02s = 5s
 
         # 关节限位
         self.jnt_low, self.jnt_high = _get_joint_limits(self.model)
@@ -94,7 +120,12 @@ class QuadrupedFoldEnv(Env):
         # 观测/动作空间
         obs_dim = N_JOINTS * 2 + 4 + 3 + 4  # 13+13+4+3+4 = 37
         self.observation_space = Box(low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32)
-        self.action_space = Box(low=-0.1, high=0.1, shape=(N_JOINTS,), dtype=np.float32)
+        self.action_space = Box(
+            low=-self.config.action_scale,
+            high=self.config.action_scale,
+            shape=(N_JOINTS,),
+            dtype=np.float32,
+        )
 
         # PD 参数
         self.Kp = np.array([
@@ -121,7 +152,7 @@ class QuadrupedFoldEnv(Env):
 
         # 当前目标位置（在 reset/step 中更新）
         self.target_q = self.stand_pose.copy()
-        self.curl_goal = 0.45
+        self.curl_goal = self.config.curl_goal
 
         self.step_count = 0
 
@@ -210,17 +241,18 @@ class QuadrupedFoldEnv(Env):
         return max(0.0, -float(torso_angle))
 
     def _compute_reward(self, action):
+        cfg = self.config
         curl = self._curl_amount()
         effective_curl = min(curl, self.curl_goal)
         curl_progress = max(0.0, effective_curl - self.init_curl)
         overcurl = max(0.0, curl - self.curl_goal)
-        r_curl = 3.0 * min(curl, self.curl_goal) / self.curl_goal
-        r_progress = 2.0 * curl_progress
+        r_curl = cfg.reward_curl * min(curl, self.curl_goal) / max(self.curl_goal, 1e-6)
+        r_progress = cfg.reward_progress * curl_progress
 
         r_tier = 0.0
-        for threshold in [0.10, 0.20, 0.30, 0.40]:
+        for threshold in cfg.curl_tiers:
             if curl > threshold and self.best_curl <= threshold:
-                r_tier += 0.5
+                r_tier += cfg.reward_tier
         self.best_curl = max(self.best_curl, curl)
 
         r_smooth = -np.mean(np.square(action))
@@ -231,23 +263,33 @@ class QuadrupedFoldEnv(Env):
 
         torso_quat = self.data.xquat[self.torso_id]
         z_proj = 1.0 - 2.0 * (torso_quat[1]**2 + torso_quat[2]**2)
-        r_upright = -4.0 * max(0, 0.9 - z_proj)
+        r_upright = -cfg.reward_upright * max(0, cfg.upright_threshold - z_proj)
 
         foot_contacts = self._foot_contacts()
         contact_count = float(np.sum(foot_contacts))
-        r_contact = 0.15 * min(contact_count, 3.0) - 0.25 * max(0.0, 2.0 - contact_count)
+        r_contact = cfg.reward_contact * min(contact_count, cfg.contact_cap) - cfg.reward_low_contact * max(0.0, cfg.min_contacts - contact_count)
 
-        r_alive = 0.05
+        r_alive = cfg.reward_alive
 
-        reward = r_curl + r_progress + r_tier + r_contact + 0.03 * r_smooth + 0.02 * r_stable + r_upright + r_alive - 3.0 * overcurl
+        reward = (
+            r_curl
+            + r_progress
+            + r_tier
+            + r_contact
+            + cfg.reward_smooth * r_smooth
+            + cfg.reward_stable * r_stable
+            + r_upright
+            + r_alive
+            - cfg.penalty_overcurl * overcurl
+        )
         return reward
 
     def _is_terminated(self):
         torso_quat = self.data.xquat[self.torso_id]
         z_proj = 1.0 - 2.0 * (torso_quat[1]**2 + torso_quat[2]**2)
-        if z_proj < 0.3:
+        if z_proj < self.config.terminate_upright:
             return True
-        if self.data.xpos[self.torso_id][2] < 0.05:
+        if self.data.xpos[self.torso_id][2] < self.config.terminate_height:
             return True
         return False
 

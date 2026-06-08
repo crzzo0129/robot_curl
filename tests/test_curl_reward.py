@@ -1,6 +1,6 @@
 import numpy as np
 
-from robot_curl.env import JOINT_NAMES, QuadrupedFoldEnv
+from robot_curl.env import CurlTaskConfig, JOINT_NAMES, QuadrupedFoldEnv
 
 
 def _set_joint(env, name, value):
@@ -24,6 +24,53 @@ def test_torso_curl_progress_is_rewarded_without_leg_targets():
     curled_reward = env._compute_reward(np.zeros(env.action_space.shape, dtype=np.float32))
 
     assert curled_reward > base_reward
+
+
+def test_task_config_controls_goal_episode_length_and_action_scale():
+    env = QuadrupedFoldEnv(config=CurlTaskConfig(curl_goal=0.20, max_episode_steps=42, action_scale=0.05))
+
+    assert env.curl_goal == 0.20
+    assert env.max_episode_steps == 42
+    assert np.allclose(env.action_space.low, -0.05)
+    assert np.allclose(env.action_space.high, 0.05)
+
+
+def test_reward_weights_are_configurable():
+    quiet = CurlTaskConfig(
+        reward_curl=0.0,
+        reward_progress=0.0,
+        reward_tier=0.0,
+        reward_contact=0.0,
+        reward_low_contact=0.0,
+        reward_smooth=0.0,
+        reward_stable=0.0,
+        reward_upright=0.0,
+        reward_alive=0.0,
+        penalty_overcurl=0.0,
+    )
+    curl_rewarded = CurlTaskConfig(
+        reward_curl=5.0,
+        reward_progress=0.0,
+        reward_tier=0.0,
+        reward_contact=0.0,
+        reward_low_contact=0.0,
+        reward_smooth=0.0,
+        reward_stable=0.0,
+        reward_upright=0.0,
+        reward_alive=0.0,
+        penalty_overcurl=0.0,
+    )
+    quiet_env = QuadrupedFoldEnv(config=quiet)
+    rewarded_env = QuadrupedFoldEnv(config=curl_rewarded)
+    quiet_env.reset(seed=10)
+    rewarded_env.reset(seed=10)
+
+    _set_joint(quiet_env, "torso_hinge", -0.20)
+    _set_joint(rewarded_env, "torso_hinge", -0.20)
+
+    assert rewarded_env._compute_reward(np.zeros(rewarded_env.action_space.shape, dtype=np.float32)) > quiet_env._compute_reward(
+        np.zeros(quiet_env.action_space.shape, dtype=np.float32)
+    )
 
 
 def test_leg_only_fold_pose_is_not_the_task():

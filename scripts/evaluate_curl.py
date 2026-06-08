@@ -4,6 +4,7 @@ from pathlib import Path
 
 import numpy as np
 
+from robot_curl.config_args import add_task_config_args, task_config_from_args
 from robot_curl.env import QuadrupedFoldEnv
 from robot_curl.policy_search import (
     CurlPolicyParams,
@@ -55,11 +56,11 @@ FEEDBACK_CEM_PARAMS = FeedbackPolicyParams(
 )
 
 
-def _load_policy(model_path, norm_path):
+def _load_policy(model_path, norm_path, config):
     from stable_baselines3 import PPO
     from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
-    env = DummyVecEnv([lambda: QuadrupedFoldEnv()])
+    env = DummyVecEnv([lambda: QuadrupedFoldEnv(config=config)])
     if norm_path and norm_path.exists():
         env = VecNormalize.load(norm_path, env)
         env.training = False
@@ -72,8 +73,8 @@ def _torso_up(env):
     return float(1.0 - 2.0 * (quat[1] ** 2 + quat[2] ** 2))
 
 
-def evaluate_open_loop(policy_name, episodes):
-    env = QuadrupedFoldEnv()
+def evaluate_open_loop(policy_name, episodes, config):
+    env = QuadrupedFoldEnv(config=config)
     rows = []
     for ep in range(episodes):
         env.reset(seed=ep)
@@ -106,8 +107,8 @@ def evaluate_open_loop(policy_name, episodes):
     return rows
 
 
-def evaluate_model(model_path, norm_path, episodes):
-    model, vec_env = _load_policy(model_path, norm_path)
+def evaluate_model(model_path, norm_path, episodes, config):
+    model, vec_env = _load_policy(model_path, norm_path, config)
     base_env = vec_env.envs[0]
     rows = []
     for ep in range(episodes):
@@ -152,14 +153,16 @@ def main():
     parser.add_argument("--model", type=Path)
     parser.add_argument("--norm", type=Path)
     parser.add_argument("--episodes", type=int, default=5)
+    add_task_config_args(parser)
     args = parser.parse_args()
+    task_config = task_config_from_args(args)
 
     if args.policy == "model":
         if args.model is None:
             raise SystemExit("--model is required for --policy model")
-        rows = evaluate_model(args.model, args.norm, args.episodes)
+        rows = evaluate_model(args.model, args.norm, args.episodes, task_config)
     else:
-        rows = evaluate_open_loop(args.policy, args.episodes)
+        rows = evaluate_open_loop(args.policy, args.episodes, task_config)
     print_rows(rows)
 
 

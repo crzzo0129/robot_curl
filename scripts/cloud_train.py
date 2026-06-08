@@ -11,11 +11,12 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 
+from robot_curl.config_args import add_task_config_args, task_config_from_args
 from robot_curl.env import QuadrupedFoldEnv
 
 
-def make_env():
-    return QuadrupedFoldEnv()
+def make_env(config):
+    return QuadrupedFoldEnv(config=config)
 
 
 def main():
@@ -26,7 +27,9 @@ def main():
     parser.add_argument("--out", type=Path, default=Path("ppo_models_cloud"))
     parser.add_argument("--log-dir", type=Path, default=Path("ppo_logs_cloud"))
     parser.add_argument("--mjx", action="store_true", help="Reserved for the future MJX backend.")
+    add_task_config_args(parser)
     args = parser.parse_args()
+    task_config = task_config_from_args(args)
 
     if args.mjx:
         raise SystemExit("MJX backend is not wired yet; use the MuJoCo/Gymnasium backend for now.")
@@ -34,10 +37,10 @@ def main():
     args.out.mkdir(parents=True, exist_ok=True)
     args.log_dir.mkdir(parents=True, exist_ok=True)
 
-    env = SubprocVecEnv([make_env for _ in range(args.envs)])
+    env = SubprocVecEnv([lambda config=task_config: make_env(config) for _ in range(args.envs)])
     env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=10.0)
 
-    eval_env = SubprocVecEnv([make_env])
+    eval_env = SubprocVecEnv([lambda config=task_config: make_env(config)])
     eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=True, training=False)
 
     checkpoint_callback = CheckpointCallback(

@@ -44,10 +44,24 @@ python -m scripts.quick_train --steps 50000
 python -m scripts.evaluate_curl --policy model --model quick_runs\curl_smoke\model.zip --norm quick_runs\curl_smoke\vec_normalize.pkl
 ```
 
+Task settings are shared by training and evaluation. For example, start with an easier curl target:
+
+```powershell
+python -m scripts.quick_train --steps 50000 --curl-goal 0.20
+python -m scripts.evaluate_curl --policy model --model quick_runs\curl_smoke\model.zip --norm quick_runs\curl_smoke\vec_normalize.pkl --curl-goal 0.20
+```
+
+Useful task knobs:
+
+- `--curl-goal`: target torso curl in radians
+- `--max-episode-steps`: episode length at 50 Hz control rate
+- `--action-scale`: per-step joint target increment limit
+- `--reward-curl`, `--reward-progress`, `--reward-contact`, `--reward-upright`: main reward weights
+
 Cloud-oriented SB3 training can start with:
 
 ```powershell
-python -m scripts.cloud_train --steps 2000000 --envs 32 --device cuda
+python -m scripts.cloud_train --steps 2000000 --envs 32 --device cuda --curl-goal 0.20
 ```
 
 Training artifacts are intentionally ignored by git under `quick_runs/`, `ppo_logs/`, and `ppo_models/`.
