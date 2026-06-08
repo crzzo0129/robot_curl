@@ -1,6 +1,6 @@
 import numpy as np
 
-from env import JOINT_NAMES, QuadrupedFoldEnv
+from robot_curl.env import JOINT_NAMES, QuadrupedFoldEnv
 
 
 def _set_joint(env, name, value):

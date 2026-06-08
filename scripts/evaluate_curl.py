@@ -4,8 +4,8 @@ from pathlib import Path
 
 import numpy as np
 
-from env import QuadrupedFoldEnv
-from policy_search import (
+from robot_curl.env import QuadrupedFoldEnv
+from robot_curl.policy_search import (
     CurlPolicyParams,
     FeedbackPolicyParams,
     make_action,

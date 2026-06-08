@@ -1,6 +1,12 @@
 import numpy as np
 
-from cem_optimize import FEEDBACK_PARAM_BOUNDS, PARAM_BOUNDS, feedback_params_from_vector, params_from_vector, update_distribution
+from scripts.cem_optimize import (
+    FEEDBACK_PARAM_BOUNDS,
+    PARAM_BOUNDS,
+    feedback_params_from_vector,
+    params_from_vector,
+    update_distribution,
+)
 
 
 def test_params_from_vector_clips_to_valid_policy_ranges():

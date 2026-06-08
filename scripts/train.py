@@ -4,7 +4,7 @@ import os
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
-from env import QuadrupedFoldEnv
+from robot_curl.env import QuadrupedFoldEnv
 
 NUM_ENVS = 4
 TOTAL_TIMESTEPS = 1_000_000

@@ -1,13 +1,13 @@
 """四足折叠环境：Gymnasium Env，PPO 训练用。"""
-import os
+from pathlib import Path
 import numpy as np
 import mujoco
 from gymnasium import Env
 from gymnasium.spaces import Box
 
 # 路径
-_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-_XML_PATH = os.path.join(_SCRIPT_DIR, "quadruped.xml")
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_XML_PATH = _REPO_ROOT / "assets" / "quadruped.xml"
 
 # 关节名列表（顺序固定）
 JOINT_NAMES = [
@@ -47,7 +47,7 @@ class QuadrupedFoldEnv(Env):
     def __init__(self, render_mode=None):
         super().__init__()
 
-        self.model = mujoco.MjModel.from_xml_path(_XML_PATH)
+        self.model = mujoco.MjModel.from_xml_path(str(_XML_PATH))
         self.data = mujoco.MjData(self.model)
         self.dt = self.model.opt.timestep  # 物理步长
 

@@ -9,7 +9,7 @@ from pathlib import Path
 
 import numpy as np
 
-from policy_search import (
+from robot_curl.policy_search import (
     CurlPolicyParams,
     FeedbackPolicyParams,
     evaluate_feedback_params,

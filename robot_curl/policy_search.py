@@ -10,7 +10,7 @@ from pathlib import Path
 
 import numpy as np
 
-from env import QuadrupedFoldEnv
+from robot_curl.env import QuadrupedFoldEnv
 
 
 @dataclass(frozen=True)

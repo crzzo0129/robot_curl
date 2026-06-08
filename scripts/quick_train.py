@@ -5,7 +5,7 @@ from pathlib import Path
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
-from env import QuadrupedFoldEnv
+from robot_curl.env import QuadrupedFoldEnv
 
 
 def make_env():
