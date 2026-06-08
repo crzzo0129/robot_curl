@@ -5,7 +5,13 @@ from pathlib import Path
 import numpy as np
 
 from env import QuadrupedFoldEnv
-from policy_search import CurlPolicyParams, make_action, make_closed_loop_action
+from policy_search import (
+    CurlPolicyParams,
+    FeedbackPolicyParams,
+    make_action,
+    make_closed_loop_action,
+    make_feedback_action,
+)
 
 
 SCRIPTED_PARAMS = CurlPolicyParams(
@@ -36,6 +42,16 @@ CEM_PARAMS = CurlPolicyParams(
     hind_knee=0.0190,
     switch_step=48,
     release_step=168,
+)
+
+FEEDBACK_CEM_PARAMS = FeedbackPolicyParams(
+    torso_gain=-0.0570,
+    front_hip_gain=-0.0154,
+    front_knee_gain=0.0047,
+    hind_hip_gain=-0.0447,
+    hind_knee_gain=0.0064,
+    phase_split=0.200,
+    min_contacts=1.00,
 )
 
 
@@ -75,6 +91,8 @@ def evaluate_open_loop(policy_name, episodes):
                 action = make_closed_loop_action(env, CLOSED_LOOP_PARAMS, step)
             elif policy_name == "cem":
                 action = make_closed_loop_action(env, CEM_PARAMS, step)
+            elif policy_name == "feedback_cem":
+                action = make_feedback_action(env, FEEDBACK_CEM_PARAMS)
             else:
                 action = np.zeros(env.action_space.shape, dtype=np.float32)
             _, reward, terminated, truncated, _ = env.step(action)
@@ -126,7 +144,11 @@ def print_rows(rows):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--policy", choices=["zero", "random", "scripted", "closed_loop", "cem", "model"], default="zero")
+    parser.add_argument(
+        "--policy",
+        choices=["zero", "random", "scripted", "closed_loop", "cem", "feedback_cem", "model"],
+        default="zero",
+    )
     parser.add_argument("--model", type=Path)
     parser.add_argument("--norm", type=Path)
     parser.add_argument("--episodes", type=int, default=5)

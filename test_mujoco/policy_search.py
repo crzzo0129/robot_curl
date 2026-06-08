@@ -24,6 +24,17 @@ class CurlPolicyParams:
     release_step: int
 
 
+@dataclass(frozen=True)
+class FeedbackPolicyParams:
+    torso_gain: float
+    front_hip_gain: float
+    front_knee_gain: float
+    hind_hip_gain: float
+    hind_knee_gain: float
+    phase_split: float
+    min_contacts: float
+
+
 def make_action(env, params, step):
     action = np.zeros(env.action_space.shape, dtype=np.float32)
     action[0] = params.torso
@@ -48,6 +59,28 @@ def make_closed_loop_action(env, params, step):
         action[0] = 0.0
     elif curl > 0.75 * env.curl_goal:
         action[0] = 0.5 * params.torso
+    return np.clip(action, env.action_space.low, env.action_space.high)
+
+
+def make_feedback_action(env, params):
+    action = np.zeros(env.action_space.shape, dtype=np.float32)
+    curl = env._curl_amount()
+    curl_error = max(0.0, env.curl_goal - curl)
+    curl_scale = curl_error / max(env.curl_goal, 1e-6)
+    contact_count = float(np.sum(env._foot_contacts()))
+    if contact_count >= params.min_contacts:
+        action[0] = params.torso_gain * curl_scale
+
+    phase = curl / max(env.curl_goal, 1e-6)
+    sign = 1.0 if phase < params.phase_split else -0.5
+    action[2] = sign * params.front_hip_gain * curl_scale
+    action[5] = sign * params.front_hip_gain * curl_scale
+    action[3] = sign * params.front_knee_gain * curl_scale
+    action[6] = sign * params.front_knee_gain * curl_scale
+    action[8] = sign * params.hind_hip_gain * curl_scale
+    action[11] = sign * params.hind_hip_gain * curl_scale
+    action[9] = sign * params.hind_knee_gain * curl_scale
+    action[12] = sign * params.hind_knee_gain * curl_scale
     return np.clip(action, env.action_space.low, env.action_space.high)
 
 
@@ -96,6 +129,47 @@ def evaluate_params(params, episodes, closed_loop=False):
     result["done"] = float(np.mean([row["done"] for row in rows]))
     result.update(asdict(params))
     result["closed_loop"] = float(closed_loop)
+    result["score"] = score_row(result)
+    return result
+
+
+def evaluate_feedback_params(params, episodes):
+    rows = []
+    for seed in range(episodes):
+        env = QuadrupedFoldEnv()
+        env.reset(seed=seed)
+        total_reward = 0.0
+        max_curl = 0.0
+        min_up = 1.0
+        contacts = []
+        done = False
+        for step in range(env.max_episode_steps):
+            action = make_feedback_action(env, params)
+            _, reward, terminated, truncated, _ = env.step(action)
+            total_reward += float(reward)
+            max_curl = max(max_curl, env._curl_amount())
+            min_up = min(min_up, _torso_up(env))
+            contacts.append(float(np.sum(env._foot_contacts())))
+            if terminated or truncated:
+                done = bool(terminated)
+                break
+        rows.append(
+            {
+                "steps": step + 1,
+                "total_reward": total_reward,
+                "max_curl": max_curl,
+                "final_z": float(env.data.xpos[env.torso_id][2]),
+                "min_up": min_up,
+                "mean_contacts": float(np.mean(contacts)),
+                "done": done,
+            }
+        )
+    result = {}
+    for key in ["steps", "total_reward", "max_curl", "final_z", "min_up", "mean_contacts"]:
+        result[key] = float(np.mean([row[key] for row in rows]))
+    result["done"] = float(np.mean([row["done"] for row in rows]))
+    result.update(asdict(params))
+    result["feedback"] = 1.0
     result["score"] = score_row(result)
     return result
 

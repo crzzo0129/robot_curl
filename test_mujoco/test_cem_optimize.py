@@ -1,6 +1,6 @@
 import numpy as np
 
-from cem_optimize import PARAM_BOUNDS, params_from_vector, update_distribution
+from cem_optimize import FEEDBACK_PARAM_BOUNDS, PARAM_BOUNDS, feedback_params_from_vector, params_from_vector, update_distribution
 
 
 def test_params_from_vector_clips_to_valid_policy_ranges():
@@ -40,3 +40,20 @@ def test_update_distribution_moves_toward_elite_samples():
 
     assert np.allclose(mean, np.array([2.5, 2.5]))
     assert np.all(std > 0)
+
+
+def test_feedback_params_from_vector_clips_to_valid_ranges():
+    vector = np.array([-1.0, -1.0, 1.0, -1.0, 1.0, -5.0, 10.0])
+    params = feedback_params_from_vector(vector)
+
+    values = [
+        params.torso_gain,
+        params.front_hip_gain,
+        params.front_knee_gain,
+        params.hind_hip_gain,
+        params.hind_knee_gain,
+        params.phase_split,
+        params.min_contacts,
+    ]
+    for value, (low, high) in zip(values, FEEDBACK_PARAM_BOUNDS):
+        assert low <= value <= high

@@ -1,7 +1,14 @@
 import numpy as np
 
 from env import QuadrupedFoldEnv
-from policy_search import CurlPolicyParams, make_action, make_closed_loop_action, score_row
+from policy_search import (
+    CurlPolicyParams,
+    FeedbackPolicyParams,
+    make_action,
+    make_closed_loop_action,
+    make_feedback_action,
+    score_row,
+)
 
 
 def test_make_action_uses_torso_and_leg_adjustment_windows():
@@ -70,3 +77,44 @@ def test_closed_loop_policy_is_conservative_with_low_contacts():
     action = make_closed_loop_action(env, params, 30)
 
     assert action[0] == 0.0
+
+
+def test_feedback_policy_scales_torso_action_with_curl_error():
+    env = QuadrupedFoldEnv()
+    env.reset(seed=8)
+    for _ in range(50):
+        env.step(np.zeros(env.action_space.shape, dtype=np.float32))
+    params = FeedbackPolicyParams(
+        torso_gain=-0.05,
+        front_hip_gain=-0.02,
+        front_knee_gain=0.04,
+        hind_hip_gain=-0.02,
+        hind_knee_gain=0.0,
+        phase_split=0.5,
+        min_contacts=2.0,
+    )
+
+    env.data.qpos[env.qpos_addr["torso_hinge"]] = -0.05
+    early = make_feedback_action(env, params)
+
+    env.data.qpos[env.qpos_addr["torso_hinge"]] = -0.40
+    late = make_feedback_action(env, params)
+
+    assert early[0] < late[0] < 0.0
+
+
+def test_feedback_policy_changes_leg_phase_by_curl_amount():
+    env = QuadrupedFoldEnv()
+    env.reset(seed=9)
+    for _ in range(50):
+        env.step(np.zeros(env.action_space.shape, dtype=np.float32))
+    params = FeedbackPolicyParams(-0.05, -0.02, 0.04, -0.02, 0.0, 0.5, 2.0)
+
+    env.data.qpos[env.qpos_addr["torso_hinge"]] = -0.05
+    early = make_feedback_action(env, params)
+
+    env.data.qpos[env.qpos_addr["torso_hinge"]] = -0.30
+    late = make_feedback_action(env, params)
+
+    assert early[3] > 0.0
+    assert late[3] < 0.0
