@@ -44,6 +44,21 @@ python -m scripts.quick_train --steps 50000
 python -m scripts.evaluate_curl --policy model --model quick_runs\curl_smoke\model.zip --norm quick_runs\curl_smoke\vec_normalize.pkl
 ```
 
+Enable Weights & Biases logging with `--wandb`:
+
+```powershell
+wandb login
+python -m scripts.quick_train --steps 50000 --wandb --wandb-project robot-curl --wandb-name curl-smoke
+```
+
+For cloud runs:
+
+```bash
+python -m scripts.cloud_train --steps 2000000 --envs 32 --device cuda --curl-goal 0.20 --wandb --wandb-project robot-curl --wandb-name cloud-curl-020
+```
+
+Use `--wandb-mode offline` if the machine cannot reach W&B during training, then sync the run later with `wandb sync`.
+
 Task settings are shared by training and evaluation. For example, start with an easier curl target:
 
 ```powershell

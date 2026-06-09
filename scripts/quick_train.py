@@ -7,6 +7,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
 from robot_curl.config_args import add_task_config_args, task_config_from_args
 from robot_curl.env import QuadrupedFoldEnv
+from robot_curl.wandb_utils import add_wandb_args, build_wandb_callback, finish_wandb_run, init_wandb_run
 
 
 def make_env(config):
@@ -21,6 +22,7 @@ def main():
     parser.add_argument("--n-steps", type=int, default=512)
     parser.add_argument("--batch-size", type=int, default=64)
     add_task_config_args(parser)
+    add_wandb_args(parser)
     args = parser.parse_args()
     task_config = task_config_from_args(args)
 
@@ -45,10 +47,14 @@ def main():
         device="cpu",
     )
 
-    model.learn(total_timesteps=args.steps, progress_bar=False)
-    model.save(args.out / "model")
-    env.save(args.out / "vec_normalize.pkl")
-    print(f"saved {args.out}")
+    wandb_run = init_wandb_run(args, task_config, script_name="quick_train")
+    try:
+        model.learn(total_timesteps=args.steps, callback=build_wandb_callback(args), progress_bar=False)
+        model.save(args.out / "model")
+        env.save(args.out / "vec_normalize.pkl")
+        print(f"saved {args.out}")
+    finally:
+        finish_wandb_run(wandb_run)
 
 
 if __name__ == "__main__":

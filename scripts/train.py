@@ -8,6 +8,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
 from robot_curl.config_args import add_task_config_args, task_config_from_args
 from robot_curl.env import QuadrupedFoldEnv
+from robot_curl.wandb_utils import add_wandb_args, build_wandb_callback, finish_wandb_run, init_wandb_run, merge_callbacks
 
 
 def make_env(config):
@@ -22,6 +23,7 @@ def main():
     parser.add_argument("--out", type=Path, default=Path("ppo_models"))
     parser.add_argument("--log-dir", type=Path, default=Path("ppo_logs"))
     add_task_config_args(parser)
+    add_wandb_args(parser)
     args = parser.parse_args()
     task_config = task_config_from_args(args)
 
@@ -63,10 +65,15 @@ def main():
         device=args.device,
     )
 
-    model.learn(total_timesteps=args.steps, callback=[checkpoint_callback, eval_callback], progress_bar=True)
-    model.save(args.out / "robot_curl_final")
-    env.save(args.out / "vec_normalize.pkl")
-    print(f"saved {args.out}")
+    wandb_run = init_wandb_run(args, task_config, script_name="train")
+    callbacks = merge_callbacks(checkpoint_callback, eval_callback, build_wandb_callback(args))
+    try:
+        model.learn(total_timesteps=args.steps, callback=callbacks, progress_bar=True)
+        model.save(args.out / "robot_curl_final")
+        env.save(args.out / "vec_normalize.pkl")
+        print(f"saved {args.out}")
+    finally:
+        finish_wandb_run(wandb_run)
 
 
 if __name__ == "__main__":
