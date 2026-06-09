@@ -19,3 +19,9 @@ def test_mjx_brax_env_factory_imports_without_heavy_dependencies():
     from robot_curl_mjx.brax_env import make_brax_env
 
     assert callable(make_brax_env)
+
+
+def test_mjx_brax_env_preserves_brax_metrics_structure():
+    source = open("robot_curl_mjx/brax_env.py", encoding="utf-8").read()
+
+    assert "metrics=state.metrics" in source

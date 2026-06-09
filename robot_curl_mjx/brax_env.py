@@ -153,19 +153,13 @@ def make_brax_env(config=None, seed=0, settle_steps=0):
                 1.0,
                 0.0,
             )
-            metrics = {
-                "curl": curl,
-                "best_curl": best_curl,
-                "upright": upright,
-                "contacts": contact_count,
-            }
             info = {
                 **state.info,
                 "target_q": target_q,
                 "best_curl": best_curl,
                 "step_count": step_count,
             }
-            return State(data, self._obs(data), reward, done, metrics=metrics, info=info)
+            return State(data, self._obs(data), reward, done, metrics=state.metrics, info=info)
 
         def _obs(self, data):
             qpos = data.qpos[self.qpos_indices]
