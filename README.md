@@ -92,4 +92,21 @@ The first `mjx.step` can spend tens of seconds in XLA compilation and may print 
 
 Expected output includes staged progress lines (`stage=init_env`, `stage=reset_start`, `stage=step_start`) plus the JAX backend, observation shape, action size, final reward, and termination flags. The smoke test defaults to `--action-repeat 1 --settle-steps 0` so first-run XLA compilation is easier to diagnose. If it works, increase `--steps`; if it is still slow, use `TF_CPP_MIN_LOG_LEVEL=2` to hide XLA warning noise. Add `--skip-reward` or `--skip-terminated` to isolate whether reward/contact checks are the slow part. This smoke test only verifies MJX model loading and stepping; MJX PPO training is the next layer.
 
+## MJX PPO Training
+
+The MJX training entrypoint uses Brax PPO with many parallel MJX environments. Start with a small cloud smoke run:
+
+```bash
+conda activate mjx312
+python -m scripts.mjx_train --steps 10000 --envs 128 --episode-length 128 --curl-goal 0.20
+```
+
+The first run will compile JAX/XLA kernels, so the first progress output can be slow. Successful runs save Brax parameters under `mjx_runs/curl_smoke/params`. Enable W&B logging with:
+
+```bash
+python -m scripts.mjx_train --steps 200000 --envs 512 --episode-length 128 --curl-goal 0.20 --wandb --wandb-project robot-curl --wandb-name mjx-curl-020
+```
+
+This entrypoint is an initial MJX training layer: it preserves the Gym task's action semantics, uses the XML position actuators directly, and logs evaluation reward/length through Brax PPO. After it runs reliably, the next step is tuning rewards and adding export/evaluation playback for trained MJX policies.
+
 Training artifacts are intentionally ignored by git under `quick_runs/`, `ppo_logs/`, and `ppo_models/`.

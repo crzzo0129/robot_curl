@@ -17,6 +17,7 @@ ppo_logs_cloud/
 ppo_models/
 ppo_models_cloud/
 quick_runs/
+mjx_runs/
 *.tfevents.*
 
 # MuJoCo/runtime logs
