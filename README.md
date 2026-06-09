@@ -85,9 +85,9 @@ The MJX backend is separate from the Gymnasium environment while parity is being
 
 ```bash
 conda activate mjx312
-python -m robot_curl_mjx.smoke_test --steps 10 --curl-goal 0.20
+python -m robot_curl_mjx.smoke_test --steps 1 --curl-goal 0.20
 ```
 
-Expected output includes the JAX backend, observation shape, action size, final reward, and termination flags. This smoke test only verifies MJX model loading and stepping; MJX PPO training is the next layer.
+Expected output includes staged progress lines (`stage=init_env`, `stage=reset_start`, `stage=step_start`) plus the JAX backend, observation shape, action size, final reward, and termination flags. The smoke test defaults to `--action-repeat 1 --settle-steps 0` so first-run XLA compilation is easier to diagnose. If it works, increase `--steps`; if it is still slow, use `TF_CPP_MIN_LOG_LEVEL=2` to hide XLA warning noise. This smoke test only verifies MJX model loading and stepping; MJX PPO training is the next layer.
 
 Training artifacts are intentionally ignored by git under `quick_runs/`, `ppo_logs/`, and `ppo_models/`.

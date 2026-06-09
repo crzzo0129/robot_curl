@@ -32,9 +32,10 @@ def _load_mjx_deps():
 class QuadrupedCurlMJXEnv:
     """Small stateful MJX backend with the same action/observation intent."""
 
-    def __init__(self, config=None, seed=0):
+    def __init__(self, config=None, seed=0, settle_steps=50):
         self.config = config or CurlTaskConfig()
         self.seed = seed
+        self.settle_steps = settle_steps
         self.jax, self.jp, self.mujoco, self.mjx = _load_mjx_deps()
         self.model = self.mujoco.MjModel.from_xml_path(str(_XML_PATH))
         self.cpu_data = self.mujoco.MjData(self.model)
@@ -98,7 +99,7 @@ class QuadrupedCurlMJXEnv:
         self.target_q = init_q
         self.step_count = 0
 
-        for _ in range(50):
+        for _ in range(self.settle_steps):
             self._apply_pd()
             self.data = self.mjx.step(self.mjx_model, self.data)
 
