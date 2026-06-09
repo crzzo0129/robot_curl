@@ -109,4 +109,12 @@ python -m scripts.mjx_train --steps 200000 --envs 512 --episode-length 128 --cur
 
 This entrypoint is an initial MJX training layer: it preserves the Gym task's action semantics, uses the XML position actuators directly, and logs evaluation reward/length through Brax PPO. After it runs reliably, the next step is tuning rewards and adding export/evaluation playback for trained MJX policies.
 
+Evaluate a saved MJX policy and render a CPU/OSMesa video:
+
+```bash
+MUJOCO_GL=osmesa python -m scripts.mjx_playback --params mjx_runs/curl_smoke/params --episodes 3 --video mjx_runs/curl_smoke/playback.mp4
+```
+
+Playback prints per-episode `total_reward`, `max_curl`, `min_upright`, contact count, and done status. It also writes `mjx_runs/curl_smoke/eval.csv`. Use `--no-video` when you only need metrics.
+
 Training artifacts are intentionally ignored by git under `quick_runs/`, `ppo_logs/`, and `ppo_models/`.

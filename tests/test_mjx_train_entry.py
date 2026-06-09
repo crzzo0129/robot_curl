@@ -4,6 +4,12 @@ def test_mjx_train_entry_imports_without_initializing_gpu():
     assert callable(mjx_train.main)
 
 
+def test_mjx_playback_entry_imports_without_initializing_gpu():
+    from scripts import mjx_playback
+
+    assert callable(mjx_playback.main)
+
+
 def test_mjx_train_defaults_are_gpu_smoke_sized():
     from scripts.mjx_train import parse_args
 
@@ -13,6 +19,17 @@ def test_mjx_train_defaults_are_gpu_smoke_sized():
     assert args.envs == 128
     assert args.episode_length == 128
     assert args.action_repeat == 1
+
+
+def test_mjx_playback_defaults_use_osmesa_video_path():
+    from scripts.mjx_playback import parse_args
+
+    args = parse_args([])
+
+    assert args.episodes == 3
+    assert args.episode_length == 128
+    assert args.params == "mjx_runs/curl_smoke/params"
+    assert args.video == "mjx_runs/curl_smoke/playback.mp4"
 
 
 def test_mjx_brax_env_factory_imports_without_heavy_dependencies():

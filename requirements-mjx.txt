@@ -8,3 +8,4 @@ flax==0.10.6
 brax==0.14.2
 numpy>=1.24
 wandb>=0.17
+imageio[ffmpeg]>=2.34
