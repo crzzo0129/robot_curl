@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 
 from robot_curl.config_args import add_task_config_args, task_config_from_args
+from robot_curl_mjx.pipeline import configure_cloud_runtime, hidden_layers_tuple, make_network_factory
 
 
 def parse_args(argv=None):
@@ -26,6 +27,9 @@ def parse_args(argv=None):
     parser.add_argument("--height", type=int, default=720)
     parser.add_argument("--fps", type=int, default=30)
     parser.add_argument("--camera", default=None)
+    parser.add_argument("--hidden-layers", type=int, nargs="+", default=[256, 128, 128, 128])
+    parser.add_argument("--activation", default="elu", choices=["relu", "tanh", "elu", "swish", "silu"])
+    parser.add_argument("--mujoco-gl", default="osmesa")
     add_task_config_args(parser)
     parser.set_defaults(action_repeat=1, max_episode_steps=128)
     return parser.parse_args(argv)
@@ -62,6 +66,7 @@ def _make_policy(args, env, params):
         num_minibatches=1,
         num_updates_per_batch=1,
         normalize_observations=True,
+        network_factory=make_network_factory(hidden_layers_tuple(args.hidden_layers), args.activation),
         seed=args.seed,
         progress_fn=lambda *_: None,
     )
@@ -159,6 +164,7 @@ def _render_video(video_path, qpos_frames, width, height, fps, camera):
 
 def main(argv=None):
     args = parse_args(argv)
+    configure_cloud_runtime(xla_triton=False, mujoco_gl=args.mujoco_gl)
     task_config = task_config_from_args(args)
     jax, model_io, _ = _load_brax_deps()
 

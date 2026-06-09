@@ -19,6 +19,26 @@ def test_mjx_train_defaults_are_gpu_smoke_sized():
     assert args.envs == 128
     assert args.episode_length == 128
     assert args.action_repeat == 1
+    assert args.hidden_layers == [256, 128, 128, 128]
+    assert args.activation == "elu"
+    assert args.wandb_video is True
+
+
+def test_mjx_pipeline_parses_hidden_layers():
+    from robot_curl_mjx.pipeline import hidden_layers_tuple
+
+    assert hidden_layers_tuple([64, 32]) == (64, 32)
+
+
+def test_mjx_pipeline_configures_cloud_runtime(monkeypatch):
+    from robot_curl_mjx.pipeline import configure_cloud_runtime
+
+    monkeypatch.delenv("MUJOCO_GL", raising=False)
+    monkeypatch.setenv("XLA_FLAGS", "")
+    configure_cloud_runtime(xla_triton=True, mujoco_gl="osmesa")
+
+    assert "xla_gpu_triton_gemm_any=True" in __import__("os").environ["XLA_FLAGS"]
+    assert __import__("os").environ["MUJOCO_GL"] == "osmesa"
 
 
 def test_mjx_playback_defaults_use_osmesa_video_path():

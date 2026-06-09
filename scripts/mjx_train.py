@@ -4,6 +4,12 @@ from pathlib import Path
 
 from robot_curl.config_args import add_task_config_args, task_config_from_args
 from robot_curl.wandb_utils import add_wandb_args, finish_wandb_run, init_wandb_run
+from robot_curl_mjx.pipeline import (
+    configure_cloud_runtime,
+    hidden_layers_tuple,
+    make_network_factory,
+    make_policy_video_callback,
+)
 
 
 def parse_args(argv=None):
@@ -23,6 +29,17 @@ def parse_args(argv=None):
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--settle-steps", type=int, default=0)
     parser.add_argument("--out", type=Path, default=Path("mjx_runs") / "curl_smoke")
+    parser.add_argument("--hidden-layers", type=int, nargs="+", default=[256, 128, 128, 128])
+    parser.add_argument("--activation", default="elu", choices=["relu", "tanh", "elu", "swish", "silu"])
+    parser.add_argument("--xla-triton", action="store_true", default=True)
+    parser.add_argument("--no-xla-triton", dest="xla_triton", action="store_false")
+    parser.add_argument("--mujoco-gl", default="osmesa")
+    parser.add_argument("--wandb-video", action="store_true", default=True)
+    parser.add_argument("--no-wandb-video", dest="wandb_video", action="store_false")
+    parser.add_argument("--video-width", type=int, default=960)
+    parser.add_argument("--video-height", type=int, default=720)
+    parser.add_argument("--video-fps", type=int, default=30)
+    parser.add_argument("--video-camera", default=None)
     add_task_config_args(parser)
     add_wandb_args(parser)
     parser.set_defaults(action_repeat=1, max_episode_steps=128)
@@ -57,6 +74,7 @@ def _make_progress_fn(wandb_run):
 
 def main(argv=None):
     args = parse_args(argv)
+    configure_cloud_runtime(xla_triton=args.xla_triton, mujoco_gl=args.mujoco_gl)
     args.out.mkdir(parents=True, exist_ok=True)
     task_config = task_config_from_args(args)
 
@@ -71,6 +89,7 @@ def main(argv=None):
     from robot_curl_mjx.brax_env import make_brax_env
 
     env = make_brax_env(config=task_config, seed=args.seed, settle_steps=args.settle_steps)
+    eval_env = make_brax_env(config=task_config, seed=args.seed + 10_000, settle_steps=args.settle_steps)
     wandb_run = init_wandb_run(args, task_config, script_name="mjx_train")
     try:
         print(
@@ -79,8 +98,21 @@ def main(argv=None):
             f"action_repeat={task_config.action_repeat}",
             flush=True,
         )
+        policy_params_fn = make_policy_video_callback(
+            enabled=args.wandb_video,
+            wandb_run=wandb_run,
+            eval_env=eval_env,
+            out_dir=args.out / "videos",
+            episode_length=args.episode_length,
+            seed=args.seed,
+            width=args.video_width,
+            height=args.video_height,
+            fps=args.video_fps,
+            camera=args.video_camera,
+        )
         train_result = ppo.train(
             environment=env,
+            eval_env=eval_env,
             num_timesteps=args.steps,
             episode_length=args.episode_length,
             action_repeat=1,
@@ -95,8 +127,10 @@ def main(argv=None):
             num_minibatches=args.num_minibatches,
             num_updates_per_batch=args.num_updates_per_batch,
             normalize_observations=True,
+            network_factory=make_network_factory(hidden_layers_tuple(args.hidden_layers), args.activation),
             seed=args.seed,
             progress_fn=_make_progress_fn(wandb_run),
+            policy_params_fn=policy_params_fn,
         )
         make_inference_fn, params, metrics = train_result
         model_io.save_params(args.out / "params", params)
