@@ -116,7 +116,19 @@ def make_brax_env(config=None, seed=0, settle_steps=0):
                 "best_curl": curl,
                 "step_count": jp.array(0, dtype=jp.int32),
             }
-            return State(data, obs, jp.array(0.0), jp.array(0.0), metrics={}, info=info)
+            reward_metrics = {
+                "reward_total": jp.array(0.0),
+                "reward_curl": jp.array(0.0),
+                "reward_progress": jp.array(0.0),
+                "reward_tier": jp.array(0.0),
+                "reward_contact": jp.array(0.0),
+                "reward_smooth": jp.array(0.0),
+                "reward_stable": jp.array(0.0),
+                "reward_upright": jp.array(0.0),
+                "reward_overcurl": jp.array(0.0),
+                "reward_alive": jp.array(0.0),
+            }
+            return State(data, obs, jp.array(0.0), jp.array(0.0), metrics=reward_metrics, info=info)
 
         def step(self, state, action):
             action = jp.clip(action, -self.config.action_scale, self.config.action_scale)
@@ -135,7 +147,7 @@ def make_brax_env(config=None, seed=0, settle_steps=0):
             upright = self._upright(data)
             torso_vel = data.cvel[self.torso_id][3:6]
             torso_angvel = data.cvel[self.torso_id][0:3]
-            reward = self._reward(
+            reward, reward_metrics = self._reward(
                 curl,
                 state.info["init_curl"],
                 state.info["best_curl"],
@@ -159,7 +171,7 @@ def make_brax_env(config=None, seed=0, settle_steps=0):
                 "best_curl": best_curl,
                 "step_count": step_count,
             }
-            return State(data, self._obs(data), reward, done, metrics=state.metrics, info=info)
+            return State(data, self._obs(data), reward, done, metrics=reward_metrics, info=info)
 
         def _obs(self, data):
             qpos = data.qpos[self.qpos_indices]
@@ -211,7 +223,18 @@ def make_brax_env(config=None, seed=0, settle_steps=0):
             r_smooth = -jp.mean(jp.square(action))
             r_stable = -0.5 * jp.sum(jp.square(torso_vel)) - 0.2 * jp.sum(jp.square(torso_angvel))
             r_upright = -cfg.reward_upright * jp.maximum(0.0, cfg.upright_threshold - upright)
-            return (
+            reward_metrics = {
+                "reward_curl": r_curl,
+                "reward_progress": r_progress,
+                "reward_tier": r_tier,
+                "reward_contact": r_contact,
+                "reward_smooth": cfg.reward_smooth * r_smooth,
+                "reward_stable": cfg.reward_stable * r_stable,
+                "reward_upright": r_upright,
+                "reward_overcurl": -cfg.penalty_overcurl * overcurl,
+                "reward_alive": jp.asarray(cfg.reward_alive),
+            }
+            reward = (
                 r_curl
                 + r_progress
                 + r_tier
@@ -222,6 +245,7 @@ def make_brax_env(config=None, seed=0, settle_steps=0):
                 + cfg.reward_alive
                 - cfg.penalty_overcurl * overcurl
             )
+            return reward, {"reward_total": reward, **reward_metrics}
 
     # Force arrays to be JAX arrays during construction, but keep the class lazy
     # until make_brax_env is called from the training entrypoint.

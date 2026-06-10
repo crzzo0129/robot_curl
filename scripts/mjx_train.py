@@ -64,8 +64,16 @@ def _metric_to_float(value):
         return float(value.item())
 
 
-def _noop_policy_params_fn(current_step, make_policy, params):
-    return None
+def _make_policy_params_fn(best_state):
+    def policy_params(current_step, make_policy, params):
+        del make_policy
+        step = int(current_step)
+        best_state["candidate_step"] = step
+        best_state["candidate_params"] = params
+        if best_state["step"] == step:
+            best_state["params"] = params
+
+    return policy_params
 
 
 def _configure_wandb_metrics(wandb_run):
@@ -76,13 +84,18 @@ def _configure_wandb_metrics(wandb_run):
     wandb_run.define_metric("eval/*", step_metric="train_step")
 
 
-def _make_progress_fn(wandb_run, progress_times, metrics_history=None):
+def _make_progress_fn(wandb_run, progress_times, metrics_history=None, best_state=None):
     def progress(num_steps, metrics):
         progress_times.append((int(num_steps), time.perf_counter()))
         clean_metrics = {name: _metric_to_float(value) for name, value in metrics.items()}
         if metrics_history is not None:
             metrics_history.append({"step": int(num_steps), **clean_metrics})
         reward = clean_metrics.get("eval/episode_reward", clean_metrics.get("eval/episode_reward_mean"))
+        if best_state is not None and reward is not None and reward > best_state["reward"]:
+            best_state["reward"] = reward
+            best_state["step"] = int(num_steps)
+            if best_state["candidate_step"] == int(num_steps):
+                best_state["params"] = best_state["candidate_params"]
         message = f"steps={num_steps}"
         if reward is not None:
             message += f" eval_reward={reward:.3f}"
@@ -169,6 +182,13 @@ def main(argv=None):
         )
         progress_times = []
         metrics_history = []
+        best_state = {
+            "reward": float("-inf"),
+            "step": None,
+            "params": None,
+            "candidate_step": None,
+            "candidate_params": None,
+        }
         train_start_time = time.perf_counter()
         train_result = ppo.train(
             environment=env,
@@ -190,17 +210,30 @@ def main(argv=None):
             normalize_observations=True,
             network_factory=make_network_factory(hidden_layers_tuple(args.hidden_layers), args.activation),
             seed=args.seed,
-            progress_fn=_make_progress_fn(wandb_run, progress_times, metrics_history),
-            policy_params_fn=_noop_policy_params_fn,
+            progress_fn=_make_progress_fn(wandb_run, progress_times, metrics_history, best_state),
+            policy_params_fn=_make_policy_params_fn(best_state),
         )
         train_end_time = time.perf_counter()
         _print_timing_summary(train_start_time, train_end_time, progress_times, wandb_run)
         make_inference_fn, params, metrics = train_result
-        model_io.save_params(args.out / "params", params)
+        best_params = best_state["params"] if best_state["params"] is not None else params
+        best_step = best_state["step"] if best_state["step"] is not None else args.steps
+        model_io.save_params(args.out / "params_final", params)
+        model_io.save_params(args.out / "params_best", best_params)
+        model_io.save_params(args.out / "params", best_params)
         metrics_path = args.out / "metrics_history.json"
         _write_metrics_history(metrics_path, metrics_history)
         print(f"stage=metrics_saved path={metrics_path}", flush=True)
-        print(f"stage=train_done saved={args.out / 'params'}", flush=True)
+        print(
+            "stage=train_done "
+            f"saved_best={args.out / 'params_best'} "
+            f"saved_final={args.out / 'params_final'} "
+            f"best_step={best_step} best_reward={best_state['reward']:.3f}",
+            flush=True,
+        )
+        if wandb_run is not None:
+            wandb_run.summary["best_eval_reward"] = best_state["reward"]
+            wandb_run.summary["best_eval_step"] = best_step
         if metrics:
             final_metrics = {name: _metric_to_float(value) for name, value in metrics.items()}
             print(f"final_metrics={final_metrics}", flush=True)
@@ -219,16 +252,16 @@ def main(argv=None):
                 height=args.video_height,
                 fps=args.video_fps,
                 camera=args.video_camera,
-                step=args.steps,
+                step=best_step,
                 make_policy=make_inference_fn,
-                params=params,
+                params=best_params,
                 render_every=args.video_render_every,
                 video_name="final_policy.mp4",
                 metric_prefix="final_policy_video",
             )
         except Exception as exc:
             print(f"stage=final_policy_video_failed error={exc}", flush=True)
-        return make_inference_fn, params
+        return make_inference_fn, best_params
     finally:
         finish_wandb_run(wandb_run)
 

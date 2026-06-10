@@ -184,10 +184,66 @@ def test_mjx_playback_rollout_uses_jitted_scan():
     assert "for step in range" not in source
 
 
-def test_mjx_training_policy_callback_is_callable_noop():
-    from scripts.mjx_train import _noop_policy_params_fn
+def test_mjx_progress_tracks_best_eval_reward():
+    from scripts.mjx_train import _make_progress_fn
 
-    assert _noop_policy_params_fn(100, object(), object()) is None
+    best = {
+        "reward": float("-inf"),
+        "step": None,
+        "params": None,
+        "candidate_step": 100,
+        "candidate_params": "params-100",
+    }
+    progress = _make_progress_fn(None, [], best_state=best)
+
+    progress(100, {"eval/episode_reward": 3.0})
+    assert best["reward"] == 3.0
+    assert best["step"] == 100
+    assert best["params"] == "params-100"
+
+    progress(200, {"eval/episode_reward": 2.0})
+    assert best["reward"] == 3.0
+    assert best["step"] == 100
+
+
+def test_mjx_policy_callback_pairs_initial_best_with_params():
+    from scripts.mjx_train import _make_policy_params_fn
+
+    best = {
+        "reward": 4.5,
+        "step": 0,
+        "params": None,
+        "candidate_step": None,
+        "candidate_params": None,
+    }
+    callback = _make_policy_params_fn(best)
+
+    params = object()
+    callback(0, object(), params)
+
+    assert best["candidate_step"] == 0
+    assert best["candidate_params"] is params
+    assert best["params"] is params
+
+
+def test_mjx_brax_env_declares_fixed_reward_metrics():
+    source = open("robot_curl_mjx/brax_env.py", encoding="utf-8").read()
+
+    for metric in [
+        "reward_total",
+        "reward_curl",
+        "reward_progress",
+        "reward_tier",
+        "reward_contact",
+        "reward_smooth",
+        "reward_stable",
+        "reward_upright",
+        "reward_overcurl",
+        "reward_alive",
+    ]:
+        assert f'"{metric}"' in source
+
+    assert "metrics=reward_metrics" in source
 
 
 def test_final_policy_video_logs_once_to_supplied_training_run(tmp_path):
@@ -237,7 +293,8 @@ def test_mjx_brax_env_factory_imports_without_heavy_dependencies():
     assert callable(make_brax_env)
 
 
-def test_mjx_brax_env_preserves_brax_metrics_structure():
+def test_mjx_brax_env_preserves_fixed_brax_metrics_structure():
     source = open("robot_curl_mjx/brax_env.py", encoding="utf-8").read()
 
-    assert "metrics=state.metrics" in source
+    assert "metrics=reward_metrics" in source
+    assert source.count('"reward_total"') >= 2
