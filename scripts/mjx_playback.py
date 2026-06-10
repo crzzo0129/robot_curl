@@ -80,7 +80,7 @@ def _to_float(value):
 def _rollout_episode(env, policy, key, episode_length):
     jax, _, _ = _load_brax_deps()
     state = env.reset(key)
-    frames = [state.pipeline_state]
+    frames = [np.asarray(state.pipeline_state.qpos)]
     total_reward = 0.0
     max_curl = _to_float(env._curl_amount(state.pipeline_state))
     min_upright = _to_float(env._upright(state.pipeline_state))
@@ -101,7 +101,7 @@ def _rollout_episode(env, policy, key, episode_length):
         max_curl = max(max_curl, curl)
         min_upright = min(min_upright, upright)
         mean_contacts += contacts
-        frames.append(state.pipeline_state)
+        frames.append(np.asarray(state.pipeline_state.qpos))
         done = bool(np.asarray(state.done))
         if done:
             break
@@ -131,21 +131,38 @@ def _write_csv(path, rows):
 
 
 def _render_video(video_path, qpos_frames, width, height, fps, camera):
-    """GPU 批量渲染：一次性推给 Brax/MJX，128 帧几秒。"""
+    """GPU 加速渲染：MuJoCo Renderer + EGL。"""
     if not qpos_frames:
         return
     try:
         import imageio.v2 as imageio
-        from brax.io import image as brax_image
-        from robot_curl_mjx.brax_env import make_brax_env
+        import mujoco
     except ImportError as exc:
-        raise SystemExit("Video rendering requires brax, mujoco, imageio[ffmpeg].") from exc
+        raise SystemExit("Video rendering requires mujoco and imageio[ffmpeg].") from exc
+
+    from robot_curl_mjx.brax_env import _XML_PATH
 
     video_path = Path(video_path)
     video_path.parent.mkdir(parents=True, exist_ok=True)
-
-    tmp_env = make_brax_env()
-    pixels = brax_image.render(tmp_env.sys, qpos_frames, width, height, camera=camera)
+    model = mujoco.MjModel.from_xml_path(str(_XML_PATH))
+    data = mujoco.MjData(model)
+    renderer = mujoco.Renderer(model, width=width, height=height)
+    pixels = []
+    try:
+        for qpos in qpos_frames:
+            if hasattr(qpos, 'qpos'):
+                q = np.asarray(qpos.qpos)
+            else:
+                q = np.asarray(qpos)
+            data.qpos[:] = q
+            mujoco.mj_forward(model, data)
+            if camera is None:
+                renderer.update_scene(data)
+            else:
+                renderer.update_scene(data, camera=camera)
+            pixels.append(renderer.render())
+    finally:
+        renderer.close()
     imageio.mimsave(video_path, pixels, fps=fps)
 
 
