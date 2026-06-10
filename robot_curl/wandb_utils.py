@@ -24,6 +24,7 @@ def _training_config(args, task_config, script_name):
         "n_steps",
         "episode_length",
         "num_evals",
+        "num_eval_envs",
         "batch_size",
         "unroll_length",
         "num_minibatches",

@@ -299,10 +299,12 @@ python -m scripts.mjx_train \
   --wandb-name mjx-curl-020
 ```
 
-Use `--no-final-policy-video` for metric-only smoke tests. Use
-`--train-policy-videos` or the compatibility alias `--wandb-video` only when
-you explicitly want policy videos during training; `--num-evals` controls that
-training-video frequency.
+Use `--num-evals 1 --no-final-policy-video` only for diagnostic smoke tests. Brax
+does an initial `steps=0` evaluation only when `num_evals > 1`, and that first
+eval/JIT phase can dominate tiny runs. Normal training should keep enough
+parallel envs/eval envs to use the GPU well. Use `--train-policy-videos` or the
+compatibility alias `--wandb-video` only when you explicitly want policy videos
+during training; `--num-evals` controls that training-video frequency.
 
 ## Playback / Evaluation
 
@@ -394,16 +396,17 @@ python -m scripts.mjx_train \
   --envs 128 \
   --episode-length 128 \
   --curl-goal 0.20 \
-  --num-evals 2 \
+  --num-evals 1 \
+  --no-final-policy-video \
   --wandb \
   --wandb-project robot-curl \
-  --wandb-name mjx-video-smoke
+  --wandb-name mjx-speed-smoke
 ```
 
-3. If final video fails, retry with:
+3. Then run a small final-video test:
 
 ```bash
-python -m scripts.mjx_train ... --wandb --no-final-policy-video
+python -m scripts.mjx_train ... --wandb --num-evals 2
 ```
 
 This separates training correctness from rendering correctness.

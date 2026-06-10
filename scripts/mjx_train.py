@@ -1,5 +1,6 @@
 """MJX/Brax PPO training entrypoint for robot curl."""
 import argparse
+import time
 from pathlib import Path
 
 from robot_curl.config_args import add_task_config_args, task_config_from_args
@@ -19,6 +20,7 @@ def parse_args(argv=None):
     parser.add_argument("--envs", type=int, default=128)
     parser.add_argument("--episode-length", type=int, default=128)
     parser.add_argument("--num-evals", type=int, default=5)
+    parser.add_argument("--num-eval-envs", type=int, default=128)
     parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--unroll-length", type=int, default=10)
     parser.add_argument("--num-minibatches", type=int, default=4)
@@ -57,8 +59,9 @@ def _metric_to_float(value):
         return float(value.item())
 
 
-def _make_progress_fn(wandb_run):
+def _make_progress_fn(wandb_run, progress_times):
     def progress(num_steps, metrics):
+        progress_times.append((int(num_steps), time.perf_counter()))
         clean_metrics = {name: _metric_to_float(value) for name, value in metrics.items()}
         reward = clean_metrics.get("eval/episode_reward", clean_metrics.get("eval/episode_reward_mean"))
         message = f"steps={num_steps}"
@@ -75,6 +78,31 @@ def _make_progress_fn(wandb_run):
             wandb.log(clean_metrics)
 
     return progress
+
+
+def _print_timing_summary(train_start, train_end, progress_times, wandb_run):
+    if not progress_times:
+        total = train_end - train_start
+        print(f"time_total={total:.3f}s", flush=True)
+        if wandb_run is not None:
+            wandb_run.summary["time_total"] = total
+        return
+
+    first_step, first_progress_time = progress_times[0]
+    time_to_first_progress = first_progress_time - train_start
+    time_after_first_progress = train_end - first_progress_time
+    print(
+        "stage=timing "
+        f"first_progress_step={first_step} "
+        f"time_to_first_progress={time_to_first_progress:.3f}s "
+        f"time_after_first_progress={time_after_first_progress:.3f}s "
+        f"time_total={train_end - train_start:.3f}s",
+        flush=True,
+    )
+    if wandb_run is not None:
+        wandb_run.summary["time_to_first_progress"] = time_to_first_progress
+        wandb_run.summary["time_after_first_progress"] = time_after_first_progress
+        wandb_run.summary["time_total"] = train_end - train_start
 
 
 def main(argv=None):
@@ -115,6 +143,8 @@ def main(argv=None):
             fps=args.video_fps,
             camera=args.video_camera,
         )
+        progress_times = []
+        train_start_time = time.perf_counter()
         train_result = ppo.train(
             environment=env,
             eval_env=eval_env,
@@ -123,6 +153,7 @@ def main(argv=None):
             action_repeat=1,
             num_envs=args.envs,
             num_evals=args.num_evals,
+            num_eval_envs=args.num_eval_envs,
             learning_rate=args.learning_rate,
             entropy_cost=args.entropy_cost,
             discounting=args.discounting,
@@ -134,9 +165,11 @@ def main(argv=None):
             normalize_observations=True,
             network_factory=make_network_factory(hidden_layers_tuple(args.hidden_layers), args.activation),
             seed=args.seed,
-            progress_fn=_make_progress_fn(wandb_run),
+            progress_fn=_make_progress_fn(wandb_run, progress_times),
             policy_params_fn=policy_params_fn,
         )
+        train_end_time = time.perf_counter()
+        _print_timing_summary(train_start_time, train_end_time, progress_times, wandb_run)
         make_inference_fn, params, metrics = train_result
         model_io.save_params(args.out / "params", params)
         print(f"stage=train_done saved={args.out / 'params'}", flush=True)

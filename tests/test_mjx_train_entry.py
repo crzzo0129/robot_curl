@@ -18,6 +18,7 @@ def test_mjx_train_defaults_are_gpu_smoke_sized():
     assert args.steps == 10_000
     assert args.envs == 128
     assert args.episode_length == 128
+    assert args.num_eval_envs == 128
     assert args.action_repeat == 1
     assert args.hidden_layers == [256, 128, 128, 128]
     assert args.activation == "elu"

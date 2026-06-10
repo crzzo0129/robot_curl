@@ -119,7 +119,10 @@ def make_policy_video_callback(
     camera,
 ):
     if not enabled or wandb_run is None:
-        return None
+        def policy_params_noop(current_step, make_policy, params):
+            return None
+
+        return policy_params_noop
 
     def policy_params_fn(current_step, make_policy, params):
         try:
