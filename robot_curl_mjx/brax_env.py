@@ -72,7 +72,7 @@ def make_brax_env(config=None, seed=0, settle_steps=0):
                 ]
             )
             self.stand_pose = jp.array(
-                [0.0, 0.0, -0.4, 0.2, 0.0, -0.4, 0.2, 0.0, 0.4, -0.2, 0.0, 0.4, -0.2],
+                [0.0, -0.4, 0.2, -0.4, 0.2, 0.4, -0.2, 0.4, -0.2],
                 dtype=jp.float32,
             )
             self.curl_tiers = jp.array(self.config.curl_tiers, dtype=jp.float32)

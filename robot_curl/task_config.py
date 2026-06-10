@@ -4,10 +4,10 @@ from dataclasses import dataclass
 
 JOINT_NAMES = [
     "torso_hinge",
-    "fl_hip_abd", "fl_hip_flex", "fl_knee",
-    "fr_hip_abd", "fr_hip_flex", "fr_knee",
-    "hl_hip_abd", "hl_hip_flex", "hl_knee",
-    "hr_hip_abd", "hr_hip_flex", "hr_knee",
+    "fl_hip_flex", "fl_knee",
+    "fr_hip_flex", "fr_knee",
+    "hl_hip_flex", "hl_knee",
+    "hr_hip_flex", "hr_knee",
 ]
 N_JOINTS = len(JOINT_NAMES)
 
@@ -31,6 +31,6 @@ class CurlTaskConfig:
     reward_upright: float = 4.0
     upright_threshold: float = 0.9
     reward_alive: float = 0.05
-    penalty_overcurl: float = 3.0
+    penalty_overcurl: float = 10.0
     terminate_upright: float = 0.3
     terminate_height: float = 0.05

@@ -63,10 +63,16 @@ tests/test_mjx_train_entry.py
 assets/quadruped.xml
 ```
 
-Current MJCF robot model. It has 13 controlled joints:
+Current MJCF robot model. It has 9 controlled joints:
 
 - 1 torso hinge: `torso_hinge`
-- 12 leg joints: abduction/flex/knee for four legs
+- 8 leg joints: flexion/knee for four legs
+
+The four hip abduction/adduction joints were removed from the MJCF and policy
+action space. The leg roots remain fixed at their left/right body offsets, so
+the legs can flex and extend but cannot swing inward or outward. This changes
+the policy action size from 13 to 9 and the observation size from 37 to 29;
+checkpoints trained with the previous 13-action model are incompatible.
 
 The XML uses position actuators. The MJX training path currently drives those
 position actuators directly.
@@ -168,7 +174,7 @@ Observed successful output included:
 
 ```text
 jax_backend=gpu
-obs_shape=(37,) action_size=13
+obs_shape=(37,) action_size=13  # historical result before the 9-DOF change
 steps=1 reward=0.250 terminated=False truncated=False
 ```
 

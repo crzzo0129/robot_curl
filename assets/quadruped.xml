@@ -28,19 +28,15 @@
     </default>
   </default>
 
-  <!-- ====== Actuator：13 个电机，位置控制 ====== -->
+  <!-- ====== Actuator: 9 position-controlled joints ====== -->
   <actuator>
     <position name="torso_hinge_act"  joint="torso_hinge"  kp="150" kv="3"/>
-    <position name="fl_hip_abd_act"   joint="fl_hip_abd"   kp="60"  kv="1"/>
     <position name="fl_hip_flex_act"  joint="fl_hip_flex"  kp="80"  kv="1.5"/>
     <position name="fl_knee_act"      joint="fl_knee"      kp="60"  kv="1"/>
-    <position name="fr_hip_abd_act"   joint="fr_hip_abd"   kp="60"  kv="1"/>
     <position name="fr_hip_flex_act"  joint="fr_hip_flex"  kp="80"  kv="1.5"/>
     <position name="fr_knee_act"      joint="fr_knee"      kp="60"  kv="1"/>
-    <position name="hl_hip_abd_act"   joint="hl_hip_abd"   kp="60"  kv="1"/>
     <position name="hl_hip_flex_act"  joint="hl_hip_flex"  kp="80"  kv="1.5"/>
     <position name="hl_knee_act"      joint="hl_knee"      kp="60"  kv="1"/>
-    <position name="hr_hip_abd_act"   joint="hr_hip_abd"   kp="60"  kv="1"/>
     <position name="hr_hip_flex_act"  joint="hr_hip_flex"  kp="80"  kv="1.5"/>
     <position name="hr_knee_act"      joint="hr_knee"      kp="60"  kv="1"/>
   </actuator>
@@ -73,7 +69,6 @@
 
       <!-- ========== 前左腿 ========== -->
       <body name="fl_abd" pos="0.0 0.08 -0.04">
-        <joint name="fl_hip_abd" type="hinge" axis="1 0 0" range="-90 90" damping="1.5"/>
         <geom type="sphere" size="0.005" rgba="0 0 0 0" mass="0.001"/>
         <body name="fl_upper" pos="0 0 0">
           <joint name="fl_hip_flex" type="hinge" axis="0 1 0" range="-60 60" damping="1.5"/>
@@ -88,7 +83,6 @@
 
       <!-- ========== 前右腿 ========== -->
       <body name="fr_abd" pos="0.0 -0.08 -0.04">
-        <joint name="fr_hip_abd" type="hinge" axis="1 0 0" range="-90 90" damping="1.5"/>
         <geom type="sphere" size="0.005" rgba="0 0 0 0" mass="0.001"/>
         <body name="fr_upper" pos="0 0 0">
           <joint name="fr_hip_flex" type="hinge" axis="0 1 0" range="-60 60" damping="1.5"/>
@@ -109,7 +103,6 @@
 
         <!-- ========== 后左腿 ========== -->
         <body name="hl_abd" pos="-0.125 0.08 -0.04">
-          <joint name="hl_hip_abd" type="hinge" axis="1 0 0" range="-90 90" damping="1.5"/>
           <geom type="sphere" size="0.005" rgba="0 0 0 0" mass="0.001"/>
           <body name="hl_upper" pos="0 0 0">
             <joint name="hl_hip_flex" type="hinge" axis="0 1 0" range="-60 60" damping="1.5"/>
@@ -124,7 +117,6 @@
 
         <!-- ========== 后右腿 ========== -->
         <body name="hr_abd" pos="-0.125 -0.08 -0.04">
-          <joint name="hr_hip_abd" type="hinge" axis="1 0 0" range="-90 90" damping="1.5"/>
           <geom type="sphere" size="0.005" rgba="0 0 0 0" mass="0.001"/>
           <body name="hr_upper" pos="0 0 0">
             <joint name="hr_hip_flex" type="hinge" axis="0 1 0" range="-60 60" damping="1.5"/>

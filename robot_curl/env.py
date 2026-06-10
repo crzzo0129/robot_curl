@@ -13,12 +13,12 @@ _XML_PATH = _REPO_ROOT / "assets" / "quadruped.xml"
 # 关节名列表（顺序固定）
 JOINT_NAMES = [
     "torso_hinge",
-    "fl_hip_abd", "fl_hip_flex", "fl_knee",
-    "fr_hip_abd", "fr_hip_flex", "fr_knee",
-    "hl_hip_abd", "hl_hip_flex", "hl_knee",
-    "hr_hip_abd", "hr_hip_flex", "hr_knee",
+    "fl_hip_flex", "fl_knee",
+    "fr_hip_flex", "fr_knee",
+    "hl_hip_flex", "hl_knee",
+    "hr_hip_flex", "hr_knee",
 ]
-N_JOINTS = len(JOINT_NAMES)  # 13
+N_JOINTS = len(JOINT_NAMES)
 
 # 关节限位（通过 model 读取）
 @dataclass(frozen=True)
@@ -40,7 +40,7 @@ class CurlTaskConfig:
     reward_upright: float = 4.0
     upright_threshold: float = 0.9
     reward_alive: float = 0.05
-    penalty_overcurl: float = 3.0
+    penalty_overcurl: float = 10.0
     terminate_upright: float = 0.3
     terminate_height: float = 0.05
 
@@ -57,14 +57,14 @@ def _get_joint_limits(model):
 class QuadrupedFoldEnv(Env):
     """四足机器人从站立折叠成球的强化学习环境。
 
-    Observation (37,):
-        [0:13]  关节角度 (rad)
-        [13:26] 关节角速度 (rad/s)
-        [26:30] 躯干姿态四元数 (w,x,y,z)
-        [30:33] 躯干线速度 (m/s)
-        [33:37] 四足触地标志 (0/1)
+    Observation (29,):
+        [0:9]   关节角度 (rad)
+        [9:18]  关节角速度 (rad/s)
+        [18:22] 躯干姿态四元数 (w,x,y,z)
+        [22:25] 躯干线速度 (m/s)
+        [25:29] 四足触地标志 (0/1)
 
-    Action (13,):
+    Action (9,):
         每个关节的目标位置偏移 (rad), 范围 [-0.1, 0.1]
         实际目标 = clip(当前目标 + action, joint_limit_low, joint_limit_high)
     """
@@ -104,21 +104,21 @@ class QuadrupedFoldEnv(Env):
         # 站立和折叠目标
         self.stand_pose = np.array([
             0.0,                        # torso_hinge
-            0.0,  -0.4,  0.2,          # fl
-            0.0,  -0.4,  0.2,          # fr
-            0.0,   0.4, -0.2,          # hl
-            0.0,   0.4, -0.2,          # hr
+            -0.4,  0.2,                 # fl
+            -0.4,  0.2,                 # fr
+             0.4, -0.2,                 # hl
+             0.4, -0.2,                 # hr
         ])
         self.fold_pose = np.array([
             -1.0,                       # torso_hinge
-            0.0,  -1.0,  1.0,          # fl
-            0.0,  -1.0,  1.0,          # fr
-            0.0,   1.0, -1.0,          # hl
-            0.0,   1.0, -1.0,          # hr
+            -1.0,  1.0,                 # fl
+            -1.0,  1.0,                 # fr
+             1.0, -1.0,                 # hl
+             1.0, -1.0,                 # hr
         ])
 
         # 观测/动作空间
-        obs_dim = N_JOINTS * 2 + 4 + 3 + 4  # 13+13+4+3+4 = 37
+        obs_dim = N_JOINTS * 2 + 4 + 3 + 4  # 9+9+4+3+4 = 29
         self.observation_space = Box(low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32)
         self.action_space = Box(
             low=-self.config.action_scale,
@@ -130,24 +130,24 @@ class QuadrupedFoldEnv(Env):
         # PD 参数
         self.Kp = np.array([
             100.0,              # torso_hinge
-            60.0, 80.0, 60.0,  # fl: abd, flex, knee
-            60.0, 80.0, 60.0,  # fr
-            60.0, 80.0, 60.0,  # hl
-            60.0, 80.0, 60.0,  # hr
+            80.0, 60.0,         # fl: flex, knee
+            80.0, 60.0,         # fr
+            80.0, 60.0,         # hl
+            80.0, 60.0,         # hr
         ])
         self.Kd = np.array([
             2.0,                # torso_hinge
-            1.0, 1.5, 1.0,     # fl
-            1.0, 1.5, 1.0,     # fr
-            1.0, 1.5, 1.0,     # hl
-            1.0, 1.5, 1.0,     # hr
+            1.5, 1.0,           # fl
+            1.5, 1.0,           # fr
+            1.5, 1.0,           # hl
+            1.5, 1.0,           # hr
         ])
         self.torque_limits = np.array([
             25.0,               # torso_hinge
-            12.0, 16.0, 12.0,   # fl
-            12.0, 16.0, 12.0,   # fr
-            12.0, 16.0, 12.0,   # hl
-            12.0, 16.0, 12.0,   # hr
+            16.0, 12.0,          # fl
+            16.0, 12.0,          # fr
+            16.0, 12.0,          # hl
+            16.0, 12.0,          # hr
         ])
 
         # 当前目标位置（在 reset/step 中更新）

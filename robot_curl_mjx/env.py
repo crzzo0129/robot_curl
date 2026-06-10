@@ -61,15 +61,15 @@ class QuadrupedCurlMJXEnv:
         )
 
         self.stand_pose_np = np.array(
-            [0.0, 0.0, -0.4, 0.2, 0.0, -0.4, 0.2, 0.0, 0.4, -0.2, 0.0, 0.4, -0.2],
+            [0.0, -0.4, 0.2, -0.4, 0.2, 0.4, -0.2, 0.4, -0.2],
             dtype=np.float32,
         )
         self.stand_pose = self.jp.array(self.stand_pose_np)
         self.jnt_low_jp = self.jp.array(self.jnt_low)
         self.jnt_high_jp = self.jp.array(self.jnt_high)
-        self.kp = self.jp.array([100.0, 60.0, 80.0, 60.0, 60.0, 80.0, 60.0, 60.0, 80.0, 60.0, 60.0, 80.0, 60.0])
-        self.kd = self.jp.array([2.0, 1.0, 1.5, 1.0, 1.0, 1.5, 1.0, 1.0, 1.5, 1.0, 1.0, 1.5, 1.0])
-        self.torque_limits = self.jp.array([25.0, 12.0, 16.0, 12.0, 12.0, 16.0, 12.0, 12.0, 16.0, 12.0, 12.0, 16.0, 12.0])
+        self.kp = self.jp.array([100.0, 80.0, 60.0, 80.0, 60.0, 80.0, 60.0, 80.0, 60.0])
+        self.kd = self.jp.array([2.0, 1.5, 1.0, 1.5, 1.0, 1.5, 1.0, 1.5, 1.0])
+        self.torque_limits = self.jp.array([25.0, 16.0, 12.0, 16.0, 12.0, 16.0, 12.0, 16.0, 12.0])
 
         self.target_q = self.stand_pose
         self.data = None

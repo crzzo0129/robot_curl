@@ -295,6 +295,23 @@ def test_mjx_brax_env_factory_imports_without_heavy_dependencies():
     assert callable(make_brax_env)
 
 
+def test_robot_model_removes_hip_abduction_dofs():
+    import xml.etree.ElementTree as ET
+
+    from robot_curl.task_config import CurlTaskConfig, JOINT_NAMES, N_JOINTS
+
+    root = ET.parse("assets/quadruped.xml").getroot()
+    joint_names = {node.get("name") for node in root.findall(".//joint")}
+    actuator_joints = {node.get("joint") for node in root.findall("./actuator/*")}
+    removed = {"fl_hip_abd", "fr_hip_abd", "hl_hip_abd", "hr_hip_abd"}
+
+    assert joint_names.isdisjoint(removed)
+    assert actuator_joints.isdisjoint(removed)
+    assert all("hip_abd" not in name for name in JOINT_NAMES)
+    assert N_JOINTS == 9
+    assert CurlTaskConfig.penalty_overcurl == 10.0
+
+
 def test_mjx_brax_env_preserves_fixed_brax_metrics_structure():
     source = open("robot_curl_mjx/brax_env.py", encoding="utf-8").read()
 
