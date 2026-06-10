@@ -49,27 +49,20 @@ def _load_brax_deps():
 
 
 def _make_policy(args, env, params):
-    _, _, ppo = _load_brax_deps()
-    make_inference_fn, _, _ = ppo.train(
-        environment=env,
-        num_timesteps=0,
-        episode_length=args.episode_length,
-        action_repeat=1,
-        num_envs=1,
-        num_evals=0,
-        learning_rate=3e-4,
-        entropy_cost=1e-2,
-        discounting=0.97,
-        reward_scaling=1.0,
-        unroll_length=1,
-        batch_size=1,
-        num_minibatches=1,
-        num_updates_per_batch=1,
-        normalize_observations=True,
-        network_factory=make_network_factory(hidden_layers_tuple(args.hidden_layers), args.activation),
-        seed=args.seed,
-        progress_fn=lambda *_: None,
+    """直接从 params 构建 inference function，不跑 ppo.train。"""
+    _, model_io, _ = _load_brax_deps()
+    import jax
+    from robot_curl_mjx.pipeline import hidden_layers_tuple, activation_fn
+    from brax.training.agents.ppo import networks as ppo_networks
+
+    net = ppo_networks.make_ppo_networks(
+        env.observation_size,
+        env.action_size,
+        policy_hidden_layer_sizes=hidden_layers_tuple(args.hidden_layers),
+        activation=activation_fn(args.activation),
     )
+    key = jax.random.PRNGKey(args.seed)
+    make_inference_fn = ppo_networks.make_inference_fn(net)
     return make_inference_fn(params, deterministic=args.deterministic)
 
 
