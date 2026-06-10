@@ -112,6 +112,33 @@ def make_network_factory(hidden_layers, activation):
     )
 
 
+def _log_policy_video(
+    *,
+    wandb_run,
+    video_path,
+    fps,
+    metric_prefix,
+    step,
+    summary,
+    wandb_module=None,
+):
+    if wandb_run is None:
+        return
+    if wandb_module is None:
+        import wandb as wandb_module
+
+    wandb_run.log(
+        {
+            metric_prefix: wandb_module.Video(str(video_path), fps=fps, format="mp4"),
+            f"{metric_prefix}/step": int(step),
+            f"{metric_prefix}/max_curl": summary["max_curl"],
+            f"{metric_prefix}/min_upright": summary["min_upright"],
+            f"{metric_prefix}/total_reward": summary["total_reward"],
+            f"{metric_prefix}/mean_contacts": summary["mean_contacts"],
+        }
+    )
+
+
 def render_policy_video(
     *,
     enabled,
@@ -149,60 +176,13 @@ def render_policy_video(
     video_path = out_dir / video_name
     _render_video(video_path, frames, width, height, fps, camera)
 
-    if wandb_run is not None:
-        import wandb
-
-        wandb.log(
-            {
-                metric_prefix: wandb.Video(str(video_path), fps=fps, format="mp4"),
-                f"{metric_prefix}/step": int(step),
-                f"{metric_prefix}/max_curl": summary["max_curl"],
-                f"{metric_prefix}/min_upright": summary["min_upright"],
-                f"{metric_prefix}/total_reward": summary["total_reward"],
-                f"{metric_prefix}/mean_contacts": summary["mean_contacts"],
-            }
-        )
+    _log_policy_video(
+        wandb_run=wandb_run,
+        video_path=video_path,
+        fps=fps,
+        metric_prefix=metric_prefix,
+        step=step,
+        summary=summary,
+    )
     print(f"stage={metric_prefix} step={step} path={video_path}", flush=True)
     return summary, video_path
-
-
-def make_policy_video_callback(
-    *,
-    enabled,
-    wandb_run,
-    eval_env,
-    out_dir,
-    episode_length,
-    seed,
-    width,
-    height,
-    fps,
-    camera,
-):
-    if not enabled or wandb_run is None:
-        def policy_params_noop(current_step, make_policy, params):
-            return None
-
-        return policy_params_noop
-
-    def policy_params_fn(current_step, make_policy, params):
-        try:
-            render_policy_video(
-                enabled=True,
-                wandb_run=wandb_run,
-                eval_env=eval_env,
-                out_dir=out_dir,
-                episode_length=episode_length,
-                seed=seed,
-                width=width,
-                height=height,
-                fps=fps,
-                camera=camera,
-                step=current_step,
-                make_policy=make_policy,
-                params=params,
-            )
-        except Exception as exc:
-            print(f"stage=policy_video_failed step={current_step} error={exc}", flush=True)
-
-    return policy_params_fn

@@ -27,7 +27,7 @@ def test_mjx_train_defaults_are_gpu_smoke_sized():
     assert args.mujoco_gl == "auto"
     assert args.matmul_precision == "high"
     assert args.runtime_diagnostics is True
-    assert args.train_policy_videos is False
+    assert not hasattr(args, "train_policy_videos")
     assert args.final_policy_video is True
 
 
@@ -89,6 +89,54 @@ def test_mjx_playback_defaults_use_osmesa_video_path():
     assert args.params == "mjx_runs/curl_smoke/params"
     assert args.video == "mjx_runs/curl_smoke/playback.mp4"
     assert args.mujoco_gl == "auto"
+    assert not hasattr(args, "wandb")
+
+
+def test_mjx_training_policy_callback_is_callable_noop():
+    from scripts.mjx_train import _noop_policy_params_fn
+
+    assert _noop_policy_params_fn(100, object(), object()) is None
+
+
+def test_final_policy_video_logs_once_to_supplied_training_run(tmp_path):
+    from robot_curl_mjx.pipeline import _log_policy_video
+
+    class FakeRun:
+        def __init__(self):
+            self.logged = []
+
+        def log(self, payload):
+            self.logged.append(payload)
+
+    class FakeWandb:
+        @staticmethod
+        def Video(path, fps, format):
+            return {"path": path, "fps": fps, "format": format}
+
+    run = FakeRun()
+    video_path = tmp_path / "final_policy.mp4"
+    summary = {
+        "max_curl": 0.25,
+        "min_upright": 0.75,
+        "total_reward": 12.0,
+        "mean_contacts": 3.0,
+    }
+
+    _log_policy_video(
+        wandb_run=run,
+        video_path=video_path,
+        fps=30,
+        metric_prefix="final_policy_video",
+        step=10_000,
+        summary=summary,
+        wandb_module=FakeWandb,
+    )
+
+    assert len(run.logged) == 1
+    payload = run.logged[0]
+    assert payload["final_policy_video"]["path"] == str(video_path)
+    assert payload["final_policy_video/step"] == 10_000
+    assert payload["final_policy_video/total_reward"] == 12.0
 
 
 def test_mjx_brax_env_factory_imports_without_heavy_dependencies():

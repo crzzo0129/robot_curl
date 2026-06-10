@@ -107,7 +107,7 @@ The first run will compile JAX/XLA kernels, so the first progress output can be 
 python -m scripts.mjx_train --steps 200000 --envs 512 --episode-length 128 --curl-goal 0.20 --wandb --wandb-project robot-curl --wandb-name mjx-curl-020
 ```
 
-The training entrypoint now follows the same shape as the Pupper cloud notebook: it sets cloud-friendly XLA/MuJoCo defaults, uses an explicit policy network (`--hidden-layers 256 128 128 128 --activation elu` by default), and logs evaluation reward/length through Brax PPO. When `--wandb` is enabled, it also renders a policy rollout after each Brax eval and uploads it as `policy_video`. Use `--num-evals` to control how many videos are produced during training, or `--no-wandb-video` to disable video rendering.
+The training entrypoint follows the same shape as the Pupper cloud notebook: it sets cloud-friendly XLA/MuJoCo defaults, uses an explicit policy network (`--hidden-layers 256 128 128 128 --activation elu` by default), and logs evaluation reward/length through Brax PPO. Training never renders videos at intermediate evaluations. After PPO finishes, it renders one deterministic `final_policy.mp4` and uploads it as `final_policy_video` to the same W&B run. Use `--no-final-policy-video` for diagnostic runs that should skip this final render.
 
 Evaluate a saved MJX policy and render a CPU/OSMesa video:
 

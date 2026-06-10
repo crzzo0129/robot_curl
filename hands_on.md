@@ -275,10 +275,9 @@ with helpers:
 - `hidden_layers_tuple(...)`
 - `activation_fn(...)`
 - `make_network_factory(...)`
-- `make_policy_video_callback(...)`
 - `render_policy_video(...)`
 
-The training script is being changed so that:
+The training script is configured so that:
 
 - default hidden layers are `256 128 128 128`
 - default activation is `elu`
@@ -286,10 +285,11 @@ The training script is being changed so that:
   configured by the script
 - `ppo.train(...)` receives an explicit `network_factory`
 - `ppo.train(...)` receives `eval_env`
-- training-time policy videos are disabled by default because OSMesa rendering
-  can block training at each eval point
+- the Brax policy callback is a callable no-op, so training never renders at
+  intermediate evaluation points and avoids the earlier `NoneType` callback
+  failure
 - by default, training renders one `final_policy.mp4` after PPO finishes and
-  uploads it to W&B when `--wandb` is enabled
+  uploads it to the still-open training W&B run when `--wandb` is enabled
 
 The intended training command after this pipeline work is committed:
 
@@ -308,9 +308,8 @@ python -m scripts.mjx_train \
 Use `--num-evals 1 --no-final-policy-video` only for diagnostic smoke tests. Brax
 does an initial `steps=0` evaluation only when `num_evals > 1`, and that first
 eval/JIT phase can dominate tiny runs. Normal training should keep enough
-parallel envs/eval envs to use the GPU well. Use `--train-policy-videos` or the
-compatibility alias `--wandb-video` only when you explicitly want policy videos
-during training; `--num-evals` controls that training-video frequency.
+parallel envs/eval envs to use the GPU well. `--num-evals` controls metric
+evaluation frequency only; it does not trigger video rendering.
 
 ## Playback / Evaluation
 
@@ -367,8 +366,7 @@ points:
 
 - Brax final `make_inference_fn(params, deterministic=True)` signature
   compatibility
-- optional `policy_params_fn` signature compatibility when using
-  `--train-policy-videos`
+- Brax calling the no-op `policy_params_fn` with its expected three arguments
 - `make_policy(params, deterministic=True)` signature compatibility
 - OSMesa/imageio/ffmpeg availability
 - rendering speed during training

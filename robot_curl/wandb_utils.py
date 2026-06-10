@@ -40,7 +40,6 @@ def _training_config(args, task_config, script_name):
         "mujoco_gl",
         "matmul_precision",
         "runtime_diagnostics",
-        "train_policy_videos",
         "final_policy_video",
         "video_width",
         "video_height",

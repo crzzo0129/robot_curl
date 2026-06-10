@@ -9,7 +9,6 @@ from robot_curl_mjx.pipeline import (
     configure_cloud_runtime,
     hidden_layers_tuple,
     make_network_factory,
-    make_policy_video_callback,
     render_policy_video,
 )
 
@@ -44,9 +43,6 @@ def parse_args(argv=None):
     )
     parser.add_argument("--runtime-diagnostics", action="store_true", default=True)
     parser.add_argument("--no-runtime-diagnostics", dest="runtime_diagnostics", action="store_false")
-    parser.add_argument("--train-policy-videos", action="store_true", default=False)
-    parser.add_argument("--wandb-video", dest="train_policy_videos", action="store_true")
-    parser.add_argument("--no-wandb-video", dest="train_policy_videos", action="store_false")
     parser.add_argument("--final-policy-video", action="store_true", default=True)
     parser.add_argument("--no-final-policy-video", dest="final_policy_video", action="store_false")
     parser.add_argument("--video-width", type=int, default=960)
@@ -64,6 +60,10 @@ def _metric_to_float(value):
         return float(value)
     except TypeError:
         return float(value.item())
+
+
+def _noop_policy_params_fn(current_step, make_policy, params):
+    return None
 
 
 def _make_progress_fn(wandb_run, progress_times):
@@ -141,18 +141,6 @@ def main(argv=None):
             f"action_repeat={task_config.action_repeat}",
             flush=True,
         )
-        policy_params_fn = make_policy_video_callback(
-            enabled=args.train_policy_videos,
-            wandb_run=wandb_run,
-            eval_env=eval_env,
-            out_dir=args.out / "videos",
-            episode_length=args.episode_length,
-            seed=args.seed,
-            width=args.video_width,
-            height=args.video_height,
-            fps=args.video_fps,
-            camera=args.video_camera,
-        )
         progress_times = []
         train_start_time = time.perf_counter()
         train_result = ppo.train(
@@ -176,7 +164,7 @@ def main(argv=None):
             network_factory=make_network_factory(hidden_layers_tuple(args.hidden_layers), args.activation),
             seed=args.seed,
             progress_fn=_make_progress_fn(wandb_run, progress_times),
-            policy_params_fn=policy_params_fn,
+            policy_params_fn=_noop_policy_params_fn,
         )
         train_end_time = time.perf_counter()
         _print_timing_summary(train_start_time, train_end_time, progress_times, wandb_run)
