@@ -26,6 +26,28 @@ def test_mjx_train_defaults_are_gpu_smoke_sized():
     assert args.final_policy_video is True
 
 
+def test_mjx_progress_logs_with_environment_step():
+    from scripts.mjx_train import _make_progress_fn
+
+    class FakeRun:
+        def __init__(self):
+            self.logged = []
+
+        def log(self, metrics, step=None):
+            self.logged.append((metrics, step))
+
+    run = FakeRun()
+    progress_times = []
+    progress = _make_progress_fn(run, progress_times)
+
+    progress(51200, {"eval/episode_reward": 12.5})
+
+    assert progress_times[0][0] == 51200
+    assert run.logged[0][1] == 51200
+    assert run.logged[0][0]["train_step"] == 51200
+    assert run.logged[0][0]["eval/episode_reward"] == 12.5
+
+
 def test_mjx_pipeline_parses_hidden_layers():
     from robot_curl_mjx.pipeline import hidden_layers_tuple
 

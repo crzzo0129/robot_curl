@@ -72,10 +72,8 @@ def _make_progress_fn(wandb_run, progress_times):
         print(message, flush=True)
 
         if wandb_run is not None:
-            import wandb
-
             clean_metrics["train_step"] = int(num_steps)
-            wandb.log(clean_metrics)
+            wandb_run.log(clean_metrics, step=int(num_steps))
 
     return progress
 
@@ -123,7 +121,7 @@ def main(argv=None):
 
     env = make_brax_env(config=task_config, seed=args.seed, settle_steps=args.settle_steps)
     eval_env = make_brax_env(config=task_config, seed=args.seed + 10_000, settle_steps=args.settle_steps)
-    wandb_run = init_wandb_run(args, task_config, script_name="mjx_train")
+    wandb_run = init_wandb_run(args, task_config, script_name="mjx_train", sync_tensorboard=False)
     try:
         print(
             "stage=train_start "

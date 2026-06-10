@@ -54,7 +54,7 @@ def _training_config(args, task_config, script_name):
     return config
 
 
-def init_wandb_run(args, task_config, script_name, wandb_module=None):
+def init_wandb_run(args, task_config, script_name, wandb_module=None, sync_tensorboard=True):
     if not getattr(args, "wandb", False):
         return None
     if wandb_module is None:
@@ -69,7 +69,7 @@ def init_wandb_run(args, task_config, script_name, wandb_module=None):
         "name": args.wandb_name,
         "tags": args.wandb_tags,
         "config": _training_config(args, task_config, script_name),
-        "sync_tensorboard": True,
+        "sync_tensorboard": sync_tensorboard,
     }
     if args.wandb_mode is not None:
         kwargs["mode"] = args.wandb_mode

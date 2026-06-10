@@ -50,6 +50,21 @@ def test_wandb_init_uses_training_and_task_config():
     assert fake.calls[0]["config"]["steps"] == 123
 
 
+def test_wandb_init_can_disable_tensorboard_sync():
+    args = _parser().parse_args(["--wandb"])
+    fake = FakeWandb()
+
+    init_wandb_run(
+        args,
+        task_config_from_args(args),
+        script_name="mjx_train",
+        wandb_module=fake,
+        sync_tensorboard=False,
+    )
+
+    assert fake.calls[0]["sync_tensorboard"] is False
+
+
 def test_finish_wandb_run_only_finishes_enabled_runs():
     fake = FakeWandb()
 
