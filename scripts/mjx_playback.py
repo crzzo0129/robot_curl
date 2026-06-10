@@ -80,7 +80,7 @@ def _to_float(value):
 def _rollout_episode(env, policy, key, episode_length):
     jax, _, _ = _load_brax_deps()
     state = env.reset(key)
-    frames = [np.asarray(state.pipeline_state.qpos)]
+    frames = [state.pipeline_state]
     total_reward = 0.0
     max_curl = _to_float(env._curl_amount(state.pipeline_state))
     min_upright = _to_float(env._upright(state.pipeline_state))
@@ -101,7 +101,7 @@ def _rollout_episode(env, policy, key, episode_length):
         max_curl = max(max_curl, curl)
         min_upright = min(min_upright, upright)
         mean_contacts += contacts
-        frames.append(np.asarray(state.pipeline_state.qpos))
+        frames.append(state.pipeline_state)
         done = bool(np.asarray(state.done))
         if done:
             break
@@ -131,34 +131,21 @@ def _write_csv(path, rows):
 
 
 def _render_video(video_path, qpos_frames, width, height, fps, camera):
+    """GPU 批量渲染：一次性推给 Brax/MJX，128 帧几秒。"""
     if not qpos_frames:
         return
-    os.environ.setdefault("MUJOCO_GL", "osmesa")
     try:
         import imageio.v2 as imageio
-        import mujoco
+        from brax.io import image as brax_image
+        from robot_curl_mjx.brax_env import make_brax_env
     except ImportError as exc:
-        raise SystemExit("Video rendering requires mujoco and imageio[ffmpeg].") from exc
-
-    from robot_curl_mjx.brax_env import _XML_PATH
+        raise SystemExit("Video rendering requires brax, mujoco, imageio[ffmpeg].") from exc
 
     video_path = Path(video_path)
     video_path.parent.mkdir(parents=True, exist_ok=True)
-    model = mujoco.MjModel.from_xml_path(str(_XML_PATH))
-    data = mujoco.MjData(model)
-    renderer = mujoco.Renderer(model, width=width, height=height)
-    pixels = []
-    try:
-        for qpos in qpos_frames:
-            data.qpos[:] = qpos
-            mujoco.mj_forward(model, data)
-            if camera is None:
-                renderer.update_scene(data)
-            else:
-                renderer.update_scene(data, camera=camera)
-            pixels.append(renderer.render())
-    finally:
-        renderer.close()
+
+    tmp_env = make_brax_env()
+    pixels = brax_image.render(tmp_env.sys, qpos_frames, width, height, camera=camera)
     imageio.mimsave(video_path, pixels, fps=fps)
 
 
