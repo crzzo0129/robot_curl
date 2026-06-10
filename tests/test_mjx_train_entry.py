@@ -70,6 +70,20 @@ def test_mjx_pipeline_configures_cloud_runtime(monkeypatch):
     assert __import__("os").environ["MUJOCO_GL"] == "osmesa"
 
 
+def test_mjx_pipeline_auto_selects_egl_for_headless_linux(monkeypatch):
+    from robot_curl_mjx.pipeline import select_mujoco_gl_backend
+
+    environ = {}
+
+    assert select_mujoco_gl_backend(environ=environ, platform_name="linux") == "egl"
+
+
+def test_mjx_pipeline_auto_preserves_explicit_backend():
+    from robot_curl_mjx.pipeline import select_mujoco_gl_backend
+
+    assert select_mujoco_gl_backend(environ={"MUJOCO_GL": "osmesa"}, platform_name="linux") == "osmesa"
+
+
 def test_mjx_pipeline_configures_matmul_precision(monkeypatch):
     from robot_curl_mjx.pipeline import configure_cloud_runtime
 

@@ -134,9 +134,9 @@ mujoco-mjx           3.9.0
 pyopengl             3.1.10
 ```
 
-Cloud rendering is auto-detected by the scripts. They try EGL first, then
-OSMesa, then disable rendering if neither works. To force CPU/OSMesa manually,
-use:
+Cloud rendering is selected before MuJoCo is imported. On headless Linux,
+`MUJOCO_GL=auto` selects EGL without initializing GLFW/X11. To force
+CPU/OSMesa manually, use:
 
 ```bash
 MUJOCO_GL=osmesa

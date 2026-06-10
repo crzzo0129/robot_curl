@@ -1,5 +1,6 @@
 """Shared helpers for the MJX training/playback pipeline."""
 import os
+import sys
 from pathlib import Path
 
 
@@ -7,35 +8,15 @@ def hidden_layers_tuple(values):
     return tuple(int(value) for value in values)
 
 
-def _detect_mujoco_gl_backend():
-    try:
-        import mujoco
-    except ImportError:
-        return None
-
-    test_xml = '<mujoco><worldbody><body><geom type="sphere" size="0.1"/></body></worldbody></mujoco>'
-    old_backend = os.environ.get("MUJOCO_GL")
-    for backend in ("egl", "osmesa"):
-        renderer = None
-        try:
-            os.environ["MUJOCO_GL"] = backend
-            model = mujoco.MjModel.from_xml_string(test_xml)
-            data = mujoco.MjData(model)
-            renderer = mujoco.Renderer(model, 32, 32)
-            renderer.update_scene(data)
-            pixels = renderer.render()
-            if pixels is not None and pixels.size > 0:
-                return backend
-        except Exception:
-            continue
-        finally:
-            if renderer is not None:
-                renderer.close()
-            if old_backend is None:
-                os.environ.pop("MUJOCO_GL", None)
-            else:
-                os.environ["MUJOCO_GL"] = old_backend
-    return None
+def select_mujoco_gl_backend(environ=None, platform_name=None):
+    environ = os.environ if environ is None else environ
+    platform_name = sys.platform if platform_name is None else platform_name
+    configured = environ.get("MUJOCO_GL")
+    if configured:
+        return configured
+    if platform_name.startswith("linux") and not environ.get("DISPLAY"):
+        return "egl"
+    return "glfw"
 
 
 def configure_cloud_runtime(xla_triton=True, mujoco_gl="auto", matmul_precision="high", verbose=False):
@@ -47,8 +28,7 @@ def configure_cloud_runtime(xla_triton=True, mujoco_gl="auto", matmul_precision=
             os.environ["XLA_FLAGS"] = f"{flags} {flag}".strip()
 
     if mujoco_gl == "auto":
-        backend = _detect_mujoco_gl_backend()
-        os.environ["MUJOCO_GL"] = backend or "disabled"
+        os.environ["MUJOCO_GL"] = select_mujoco_gl_backend()
     elif mujoco_gl:
         os.environ.setdefault("MUJOCO_GL", mujoco_gl)
 
