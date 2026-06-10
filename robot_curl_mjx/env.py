@@ -135,7 +135,7 @@ class QuadrupedCurlMJXEnv:
 
     def _curl_amount(self):
         torso_angle = self.data.qpos[self.qpos_addr["torso_hinge"]]
-        return self.jp.maximum(0.0, -torso_angle)
+        return self.jp.maximum(0.0, torso_angle)
 
     def _foot_contacts(self):
         contact = self.data.contact

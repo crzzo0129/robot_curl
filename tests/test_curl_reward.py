@@ -13,7 +13,7 @@ def test_torso_curl_progress_is_rewarded_without_leg_targets():
 
     base_reward = env._compute_reward(np.zeros(env.action_space.shape, dtype=np.float32))
 
-    _set_joint(env, "torso_hinge", -0.35)
+    _set_joint(env, "torso_hinge", 0.35)
     changed_legs = [
         name
         for name in JOINT_NAMES
@@ -65,8 +65,8 @@ def test_reward_weights_are_configurable():
     quiet_env.reset(seed=10)
     rewarded_env.reset(seed=10)
 
-    _set_joint(quiet_env, "torso_hinge", -0.20)
-    _set_joint(rewarded_env, "torso_hinge", -0.20)
+    _set_joint(quiet_env, "torso_hinge", 0.20)
+    _set_joint(rewarded_env, "torso_hinge", 0.20)
 
     assert rewarded_env._compute_reward(np.zeros(rewarded_env.action_space.shape, dtype=np.float32)) > quiet_env._compute_reward(
         np.zeros(quiet_env.action_space.shape, dtype=np.float32)
@@ -118,10 +118,21 @@ def test_overcurl_is_not_more_rewarding_than_goal_curl():
     env = QuadrupedFoldEnv()
     env.reset(seed=5)
 
-    _set_joint(env, "torso_hinge", -env.curl_goal)
+    _set_joint(env, "torso_hinge", env.curl_goal)
     goal_reward = env._compute_reward(np.zeros(env.action_space.shape, dtype=np.float32))
 
-    _set_joint(env, "torso_hinge", -(env.curl_goal + 0.5))
+    _set_joint(env, "torso_hinge", env.curl_goal + 0.5)
     overcurl_reward = env._compute_reward(np.zeros(env.action_space.shape, dtype=np.float32))
 
     assert overcurl_reward <= goal_reward
+
+
+def test_positive_torso_hinge_is_the_curl_direction():
+    env = QuadrupedFoldEnv()
+    env.reset(seed=6)
+
+    _set_joint(env, "torso_hinge", 0.35)
+    assert np.isclose(env._curl_amount(), 0.35)
+
+    _set_joint(env, "torso_hinge", -0.35)
+    assert np.isclose(env._curl_amount(), 0.0)
