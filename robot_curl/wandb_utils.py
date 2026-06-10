@@ -44,6 +44,7 @@ def _training_config(args, task_config, script_name):
         "video_width",
         "video_height",
         "video_fps",
+        "video_render_every",
         "video_camera",
         "out",
         "log_dir",

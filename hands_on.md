@@ -135,8 +135,9 @@ pyopengl             3.1.10
 ```
 
 Cloud rendering is selected before MuJoCo is imported. On headless Linux,
-`MUJOCO_GL=auto` selects EGL without initializing GLFW/X11. To force
-CPU/OSMesa manually, use:
+the training and playback entrypoints default to OSMesa, matching the proven
+bridge project. To override it manually, set `MUJOCO_GL` before launch or pass
+`--mujoco-gl egl` on a machine with working EGL:
 
 ```bash
 MUJOCO_GL=osmesa
@@ -290,8 +291,9 @@ The training script is configured so that:
   failure
 - by default, training renders one `final_policy.mp4` after PPO finishes and
   uploads it to the still-open training W&B run when `--wandb` is enabled
-- the final video defaults to `320x240` and about 4.3 seconds (128 steps at
-  30 FPS) to reduce headless rendering and encoding cost
+- final inference follows the `bridge_mujoco_playground` pattern: one compiled
+  `jax.jit` + `jax.lax.scan` produces the trajectory, then every second frame
+  is rendered at `320x240`; no Python loop synchronizes MJX one step at a time
 - W&B history uses `train_step` as an explicitly defined metric axis; progress
   and final metrics are committed before final video rendering begins
 
@@ -303,7 +305,7 @@ python -m scripts.mjx_train \
   --envs 512 \
   --episode-length 128 \
   --curl-goal 0.20 \
-  --num-evals 5 \
+  --num-evals 10 \
   --wandb \
   --wandb-project robot-curl \
   --wandb-name mjx-curl-020

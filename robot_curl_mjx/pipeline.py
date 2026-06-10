@@ -1,4 +1,5 @@
 """Shared helpers for the MJX training/playback pipeline."""
+import importlib.metadata
 import os
 import sys
 from pathlib import Path
@@ -15,22 +16,42 @@ def select_mujoco_gl_backend(environ=None, platform_name=None):
     if configured:
         return configured
     if platform_name.startswith("linux") and not environ.get("DISPLAY"):
-        return "egl"
+        return "osmesa"
     return "glfw"
 
 
 def configure_cloud_runtime(xla_triton=True, mujoco_gl="auto", matmul_precision="high", verbose=False):
     """Applies cloud-friendly defaults used by the MJX training scripts."""
+    flags = os.environ.get("XLA_FLAGS", "")
+    xla_flags = []
     if xla_triton:
-        flags = os.environ.get("XLA_FLAGS", "")
-        flag = "--xla_gpu_triton_gemm_any=True"
+        xla_flags.extend(
+            [
+                "--xla_gpu_enable_latency_hiding_scheduler=true",
+                "--xla_gpu_shard_autotuning=false",
+                "--xla_gpu_triton_gemm_any=True",
+            ]
+        )
+        try:
+            jaxlib_version = importlib.metadata.version("jaxlib").replace(".", "_")
+        except importlib.metadata.PackageNotFoundError:
+            jaxlib_version = None
+        if jaxlib_version is not None:
+            autotune_path = f"/tmp/xla_autotune_jaxlib_{jaxlib_version}.pbtxt"
+            xla_flags.append(f"--xla_gpu_dump_autotune_results_to={autotune_path}")
+            if Path(autotune_path).exists():
+                xla_flags.append(f"--xla_gpu_load_autotune_results_from={autotune_path}")
+    for flag in xla_flags:
         if flag not in flags:
-            os.environ["XLA_FLAGS"] = f"{flags} {flag}".strip()
+            flags = f"{flags} {flag}".strip()
+    os.environ["XLA_FLAGS"] = flags
 
     if mujoco_gl == "auto":
         os.environ["MUJOCO_GL"] = select_mujoco_gl_backend()
     elif mujoco_gl:
-        os.environ.setdefault("MUJOCO_GL", mujoco_gl)
+        os.environ["MUJOCO_GL"] = mujoco_gl
+    if os.environ.get("MUJOCO_GL"):
+        os.environ["PYOPENGL_PLATFORM"] = os.environ["MUJOCO_GL"]
 
     if matmul_precision:
         os.environ.setdefault("JAX_DEFAULT_MATMUL_PRECISION", matmul_precision)
@@ -38,6 +59,10 @@ def configure_cloud_runtime(xla_triton=True, mujoco_gl="auto", matmul_precision=
             import jax
 
             jax.config.update("jax_default_matmul_precision", matmul_precision)
+            cache_dir = Path.home() / ".cache" / "jax_compilation_cache"
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            jax.config.update("jax_compilation_cache_dir", str(cache_dir))
+            jax.config.update("jax_persistent_cache_min_compile_time_secs", 5)
         except ImportError:
             pass
 
@@ -134,6 +159,7 @@ def render_policy_video(
     step,
     make_policy,
     params,
+    render_every=2,
     video_name=None,
     metric_prefix="policy_video",
 ):
@@ -150,7 +176,13 @@ def render_policy_video(
     except TypeError:
         policy = make_policy(params)
     key = jax.random.PRNGKey(seed + int(step))
-    summary, frames = _rollout_episode(eval_env, policy, key, episode_length)
+    summary, frames = _rollout_episode(
+        eval_env,
+        policy,
+        key,
+        episode_length,
+        render_every=render_every,
+    )
     if video_name is None:
         video_name = f"policy_step_{int(step):09d}.mp4"
     video_path = out_dir / video_name

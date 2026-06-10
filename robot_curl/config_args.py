@@ -1,6 +1,6 @@
 """Command-line helpers for task configuration."""
 
-from robot_curl.env import CurlTaskConfig
+from robot_curl.task_config import CurlTaskConfig
 
 
 def add_task_config_args(parser):

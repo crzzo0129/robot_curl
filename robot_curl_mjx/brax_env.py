@@ -9,7 +9,7 @@ from pathlib import Path
 
 import numpy as np
 
-from robot_curl.env import CurlTaskConfig, JOINT_NAMES, N_JOINTS
+from robot_curl.task_config import CurlTaskConfig, JOINT_NAMES, N_JOINTS
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]

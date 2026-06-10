@@ -1,13 +1,16 @@
-"""Evaluate a saved MJX/Brax PPO policy and optionally render OSMesa video."""
+"""Evaluate a saved MJX/Brax PPO policy and optionally render a video."""
 import argparse
 import csv
-import os
 from pathlib import Path
 
 import numpy as np
 
 from robot_curl.config_args import add_task_config_args, task_config_from_args
-from robot_curl_mjx.pipeline import configure_cloud_runtime, hidden_layers_tuple, make_network_factory
+from robot_curl_mjx.pipeline import (
+    activation_fn,
+    configure_cloud_runtime,
+    hidden_layers_tuple,
+)
 
 
 def parse_args(argv=None):
@@ -23,13 +26,14 @@ def parse_args(argv=None):
     parser.add_argument("--video", default="mjx_runs/curl_smoke/playback.mp4")
     parser.add_argument("--no-video", action="store_true")
     parser.add_argument("--video-episode", type=int, default=0)
-    parser.add_argument("--width", type=int, default=960)
-    parser.add_argument("--height", type=int, default=720)
+    parser.add_argument("--width", type=int, default=320)
+    parser.add_argument("--height", type=int, default=240)
     parser.add_argument("--fps", type=int, default=30)
+    parser.add_argument("--render-every", type=int, default=2)
     parser.add_argument("--camera", default=None)
     parser.add_argument("--hidden-layers", type=int, nargs="+", default=[256, 128, 128, 128])
     parser.add_argument("--activation", default="elu", choices=["relu", "tanh", "elu", "swish", "silu"])
-    parser.add_argument("--mujoco-gl", default="auto")
+    parser.add_argument("--mujoco-gl", default="osmesa")
     add_task_config_args(parser)
     parser.set_defaults(action_repeat=1, max_episode_steps=128)
     return parser.parse_args(argv)
@@ -39,75 +43,81 @@ def _load_brax_deps():
     try:
         import jax
         from brax.io import model as model_io
-        from brax.training.agents.ppo import train as ppo
+        from brax.training.agents.ppo import networks as ppo_networks
     except ImportError as exc:
         raise SystemExit(
             "MJX playback requires Brax/JAX. Activate the mjx312 conda environment "
             "or install brax, jax, mujoco, and mujoco-mjx."
         ) from exc
-    return jax, model_io, ppo
+    return jax, model_io, ppo_networks
 
 
 def _make_policy(args, env, params):
-    """直接从 params 构建 inference function，不跑 ppo.train。"""
-    _, model_io, _ = _load_brax_deps()
-    import jax
-    from robot_curl_mjx.pipeline import hidden_layers_tuple, activation_fn
-    from brax.training.agents.ppo import networks as ppo_networks
-
-    net = ppo_networks.make_ppo_networks(
+    """Builds an inference function directly from saved PPO parameters."""
+    _, _, ppo_networks = _load_brax_deps()
+    network = ppo_networks.make_ppo_networks(
         env.observation_size,
         env.action_size,
         policy_hidden_layer_sizes=hidden_layers_tuple(args.hidden_layers),
         activation=activation_fn(args.activation),
     )
-    key = jax.random.PRNGKey(args.seed)
-    make_inference_fn = ppo_networks.make_inference_fn(net)
+    make_inference_fn = ppo_networks.make_inference_fn(network)
     return make_inference_fn(params, deterministic=args.deterministic)
 
 
-def _to_float(value):
-    return float(np.asarray(value))
-
-
-def _rollout_episode(env, policy, key, episode_length):
+def _rollout_episode(env, policy, key, episode_length, render_every=1):
+    """Runs the whole MJX rollout in one compiled scan."""
     jax, _, _ = _load_brax_deps()
-    state = env.reset(key)
-    frames = [np.asarray(state.pipeline_state.qpos)]
-    total_reward = 0.0
-    max_curl = _to_float(env._curl_amount(state.pipeline_state))
-    min_upright = _to_float(env._upright(state.pipeline_state))
-    mean_contacts = 0.0
-    steps = 0
-    done = False
+    import jax.numpy as jp
 
-    for step in range(episode_length):
-        key, action_key = jax.random.split(key)
-        action, _ = policy(state.obs, action_key)
-        state = env.step(state, action)
-        state.reward.block_until_ready()
-        steps = step + 1
-        total_reward += _to_float(state.reward)
-        curl = _to_float(env._curl_amount(state.pipeline_state))
-        upright = _to_float(env._upright(state.pipeline_state))
-        contacts = _to_float(env._foot_contacts(state.pipeline_state).sum())
-        max_curl = max(max_curl, curl)
-        min_upright = min(min_upright, upright)
-        mean_contacts += contacts
-        frames.append(np.asarray(state.pipeline_state.qpos))
-        done = bool(np.asarray(state.done))
-        if done:
-            break
+    render_every = max(1, int(render_every))
 
-    mean_contacts = mean_contacts / max(steps, 1)
+    def do_rollout(reset_key):
+        state = env.reset(reset_key)
+        initial_qpos = state.pipeline_state.qpos
+
+        def scan_step(carry, _):
+            state, rng, already_done = carry
+            rng, action_key = jax.random.split(rng)
+            action, _ = policy(state.obs, action_key)
+            state = env.step(state, action)
+            active = ~already_done
+            done = state.done.astype(bool)
+            sample = (
+                state.pipeline_state.qpos,
+                jp.where(active, state.reward, 0.0),
+                env._curl_amount(state.pipeline_state),
+                env._upright(state.pipeline_state),
+                env._foot_contacts(state.pipeline_state).sum(),
+                done,
+                active,
+            )
+            return (state, rng, already_done | done), sample
+
+        (_, _, _), trajectory = jax.lax.scan(
+            scan_step,
+            (state, reset_key, jp.array(False)),
+            None,
+            length=episode_length,
+        )
+        return initial_qpos, trajectory
+
+    initial_qpos, trajectory = jax.jit(do_rollout)(key)
+    initial_qpos, trajectory = jax.device_get((initial_qpos, trajectory))
+    qpos, rewards, curls, uprights, contacts, dones, active = map(np.asarray, trajectory)
+    active = active.astype(bool)
+    steps = int(active.sum())
+    valid_steps = max(steps, 1)
     summary = {
         "steps": steps,
-        "total_reward": total_reward,
-        "max_curl": max_curl,
-        "min_upright": min_upright,
-        "mean_contacts": mean_contacts,
-        "done": done,
+        "total_reward": float(rewards[:valid_steps].sum()),
+        "max_curl": float(curls[:valid_steps].max()),
+        "min_upright": float(uprights[:valid_steps].min()),
+        "mean_contacts": float(contacts[:valid_steps].mean()),
+        "done": bool(dones[:valid_steps].any()),
     }
+    frames = [np.asarray(initial_qpos)]
+    frames.extend(qpos[:steps:render_every])
     return summary, frames
 
 
@@ -124,50 +134,35 @@ def _write_csv(path, rows):
 
 
 def _render_video(video_path, qpos_frames, width, height, fps, camera):
-    """GPU 加速渲染：MuJoCo Renderer + EGL。"""
+    """Renders a precomputed trajectory with MuJoCo's headless renderer."""
     if not qpos_frames:
-        print("WARNING: qpos_frames is empty, skipping video")
         return
-    print(f"Render start: frames={len(qpos_frames)} size={width}x{height} fps={fps} mu=GL={os.environ.get('MUJOCO_GL','unset')}", flush=True)
     try:
         import imageio.v2 as imageio
         import mujoco
-        print("imports OK", flush=True)
     except ImportError as exc:
         raise SystemExit("Video rendering requires mujoco and imageio[ffmpeg].") from exc
 
     from robot_curl_mjx.brax_env import _XML_PATH
-    print(f"model path={_XML_PATH}", flush=True)
 
     video_path = Path(video_path)
     video_path.parent.mkdir(parents=True, exist_ok=True)
-    print("loading model...", flush=True)
     model = mujoco.MjModel.from_xml_path(str(_XML_PATH))
     data = mujoco.MjData(model)
-    print("creating renderer...", flush=True)
     renderer = mujoco.Renderer(model, width=width, height=height)
-    print(f"renderer created, rendering {len(qpos_frames)} frames...", flush=True)
     pixels = []
     try:
-        for i, qpos in enumerate(qpos_frames):
-            if i % 20 == 0:
-                print(f"  frame {i}/{len(qpos_frames)}", flush=True)
-            if hasattr(qpos, 'qpos'):
-                q = np.asarray(qpos.qpos)
-            else:
-                q = np.asarray(qpos)
-            data.qpos[:] = q
+        for qpos in qpos_frames:
+            data.qpos[:] = np.asarray(qpos)
             mujoco.mj_forward(model, data)
             if camera is None:
                 renderer.update_scene(data)
             else:
                 renderer.update_scene(data, camera=camera)
             pixels.append(renderer.render())
-        print(f"render done, {len(pixels)} frames, encoding mp4...", flush=True)
     finally:
         renderer.close()
     imageio.mimsave(video_path, pixels, fps=fps)
-    print(f"video saved: {video_path}", flush=True)
 
 
 def main(argv=None):
@@ -186,7 +181,13 @@ def main(argv=None):
     video_frames = None
     for episode in range(args.episodes):
         key = jax.random.PRNGKey(args.seed + episode)
-        summary, frames = _rollout_episode(env, policy, key, args.episode_length)
+        summary, frames = _rollout_episode(
+            env,
+            policy,
+            key,
+            args.episode_length,
+            render_every=args.render_every,
+        )
         row = {"episode": episode, **summary}
         rows.append(row)
         print(

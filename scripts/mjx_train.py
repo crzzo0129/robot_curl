@@ -1,5 +1,6 @@
 """MJX/Brax PPO training entrypoint for robot curl."""
 import argparse
+import json
 import time
 from pathlib import Path
 
@@ -18,7 +19,7 @@ def parse_args(argv=None):
     parser.add_argument("--steps", type=int, default=10_000)
     parser.add_argument("--envs", type=int, default=128)
     parser.add_argument("--episode-length", type=int, default=128)
-    parser.add_argument("--num-evals", type=int, default=5)
+    parser.add_argument("--num-evals", type=int, default=10)
     parser.add_argument("--num-eval-envs", type=int, default=128)
     parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--unroll-length", type=int, default=20)
@@ -35,7 +36,7 @@ def parse_args(argv=None):
     parser.add_argument("--activation", default="elu", choices=["relu", "tanh", "elu", "swish", "silu"])
     parser.add_argument("--xla-triton", action="store_true", default=True)
     parser.add_argument("--no-xla-triton", dest="xla_triton", action="store_false")
-    parser.add_argument("--mujoco-gl", default="auto")
+    parser.add_argument("--mujoco-gl", default="osmesa")
     parser.add_argument(
         "--matmul-precision",
         default="high",
@@ -48,6 +49,7 @@ def parse_args(argv=None):
     parser.add_argument("--video-width", type=int, default=320)
     parser.add_argument("--video-height", type=int, default=240)
     parser.add_argument("--video-fps", type=int, default=30)
+    parser.add_argument("--video-render-every", type=int, default=2)
     parser.add_argument("--video-camera", default=None)
     add_task_config_args(parser)
     add_wandb_args(parser)
@@ -74,10 +76,12 @@ def _configure_wandb_metrics(wandb_run):
     wandb_run.define_metric("eval/*", step_metric="train_step")
 
 
-def _make_progress_fn(wandb_run, progress_times):
+def _make_progress_fn(wandb_run, progress_times, metrics_history=None):
     def progress(num_steps, metrics):
         progress_times.append((int(num_steps), time.perf_counter()))
         clean_metrics = {name: _metric_to_float(value) for name, value in metrics.items()}
+        if metrics_history is not None:
+            metrics_history.append({"step": int(num_steps), **clean_metrics})
         reward = clean_metrics.get("eval/episode_reward", clean_metrics.get("eval/episode_reward_mean"))
         message = f"steps={num_steps}"
         if reward is not None:
@@ -91,6 +95,13 @@ def _make_progress_fn(wandb_run, progress_times):
             wandb_run.log(clean_metrics)
 
     return progress
+
+
+def _write_metrics_history(path, metrics_history):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as fh:
+        json.dump(metrics_history, fh, indent=2)
 
 
 def _log_final_metrics(wandb_run, metrics, train_step):
@@ -157,6 +168,7 @@ def main(argv=None):
             flush=True,
         )
         progress_times = []
+        metrics_history = []
         train_start_time = time.perf_counter()
         train_result = ppo.train(
             environment=env,
@@ -178,13 +190,16 @@ def main(argv=None):
             normalize_observations=True,
             network_factory=make_network_factory(hidden_layers_tuple(args.hidden_layers), args.activation),
             seed=args.seed,
-            progress_fn=_make_progress_fn(wandb_run, progress_times),
+            progress_fn=_make_progress_fn(wandb_run, progress_times, metrics_history),
             policy_params_fn=_noop_policy_params_fn,
         )
         train_end_time = time.perf_counter()
         _print_timing_summary(train_start_time, train_end_time, progress_times, wandb_run)
         make_inference_fn, params, metrics = train_result
         model_io.save_params(args.out / "params", params)
+        metrics_path = args.out / "metrics_history.json"
+        _write_metrics_history(metrics_path, metrics_history)
+        print(f"stage=metrics_saved path={metrics_path}", flush=True)
         print(f"stage=train_done saved={args.out / 'params'}", flush=True)
         if metrics:
             final_metrics = {name: _metric_to_float(value) for name, value in metrics.items()}
@@ -207,6 +222,7 @@ def main(argv=None):
                 step=args.steps,
                 make_policy=make_inference_fn,
                 params=params,
+                render_every=args.video_render_every,
                 video_name="final_policy.mp4",
                 metric_prefix="final_policy_video",
             )
