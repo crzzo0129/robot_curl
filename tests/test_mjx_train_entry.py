@@ -29,6 +29,8 @@ def test_mjx_train_defaults_are_gpu_smoke_sized():
     assert args.runtime_diagnostics is True
     assert not hasattr(args, "train_policy_videos")
     assert args.final_policy_video is True
+    assert args.video_width == 320
+    assert args.video_height == 240
 
 
 def test_mjx_progress_logs_with_environment_step():
@@ -38,8 +40,8 @@ def test_mjx_progress_logs_with_environment_step():
         def __init__(self):
             self.logged = []
 
-        def log(self, metrics, step=None):
-            self.logged.append((metrics, step))
+        def log(self, metrics, **kwargs):
+            self.logged.append((metrics, kwargs))
 
     run = FakeRun()
     progress_times = []
@@ -48,9 +50,45 @@ def test_mjx_progress_logs_with_environment_step():
     progress(51200, {"eval/episode_reward": 12.5})
 
     assert progress_times[0][0] == 51200
-    assert run.logged[0][1] == 51200
+    assert run.logged[0][1] == {}
     assert run.logged[0][0]["train_step"] == 51200
     assert run.logged[0][0]["eval/episode_reward"] == 12.5
+
+
+def test_mjx_wandb_metrics_use_train_step_axis():
+    from scripts.mjx_train import _configure_wandb_metrics
+
+    class FakeRun:
+        def __init__(self):
+            self.defined = []
+
+        def define_metric(self, name, **kwargs):
+            self.defined.append((name, kwargs))
+
+    run = FakeRun()
+
+    _configure_wandb_metrics(run)
+
+    assert ("train_step", {}) in run.defined
+    assert ("training/*", {"step_metric": "train_step"}) in run.defined
+    assert ("eval/*", {"step_metric": "train_step"}) in run.defined
+
+
+def test_mjx_final_metrics_are_committed_before_video():
+    from scripts.mjx_train import _log_final_metrics
+
+    class FakeRun:
+        def __init__(self):
+            self.logged = []
+
+        def log(self, metrics, **kwargs):
+            self.logged.append((metrics, kwargs))
+
+    run = FakeRun()
+
+    _log_final_metrics(run, {"training/sps": 42.0}, train_step=655360)
+
+    assert run.logged == [({"training/sps": 42.0, "train_step": 655360}, {})]
 
 
 def test_mjx_pipeline_parses_hidden_layers():

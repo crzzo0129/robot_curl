@@ -290,6 +290,10 @@ The training script is configured so that:
   failure
 - by default, training renders one `final_policy.mp4` after PPO finishes and
   uploads it to the still-open training W&B run when `--wandb` is enabled
+- the final video defaults to `320x240` and about 4.3 seconds (128 steps at
+  30 FPS) to reduce headless rendering and encoding cost
+- W&B history uses `train_step` as an explicitly defined metric axis; progress
+  and final metrics are committed before final video rendering begins
 
 The intended training command after this pipeline work is committed:
 

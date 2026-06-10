@@ -45,8 +45,8 @@ def parse_args(argv=None):
     parser.add_argument("--no-runtime-diagnostics", dest="runtime_diagnostics", action="store_false")
     parser.add_argument("--final-policy-video", action="store_true", default=True)
     parser.add_argument("--no-final-policy-video", dest="final_policy_video", action="store_false")
-    parser.add_argument("--video-width", type=int, default=960)
-    parser.add_argument("--video-height", type=int, default=720)
+    parser.add_argument("--video-width", type=int, default=320)
+    parser.add_argument("--video-height", type=int, default=240)
     parser.add_argument("--video-fps", type=int, default=30)
     parser.add_argument("--video-camera", default=None)
     add_task_config_args(parser)
@@ -66,6 +66,14 @@ def _noop_policy_params_fn(current_step, make_policy, params):
     return None
 
 
+def _configure_wandb_metrics(wandb_run):
+    if wandb_run is None:
+        return
+    wandb_run.define_metric("train_step")
+    wandb_run.define_metric("training/*", step_metric="train_step")
+    wandb_run.define_metric("eval/*", step_metric="train_step")
+
+
 def _make_progress_fn(wandb_run, progress_times):
     def progress(num_steps, metrics):
         progress_times.append((int(num_steps), time.perf_counter()))
@@ -80,9 +88,15 @@ def _make_progress_fn(wandb_run, progress_times):
 
         if wandb_run is not None:
             clean_metrics["train_step"] = int(num_steps)
-            wandb_run.log(clean_metrics, step=int(num_steps))
+            wandb_run.log(clean_metrics)
 
     return progress
+
+
+def _log_final_metrics(wandb_run, metrics, train_step):
+    if wandb_run is None or not metrics:
+        return
+    wandb_run.log({**metrics, "train_step": int(train_step)})
 
 
 def _print_timing_summary(train_start, train_end, progress_times, wandb_run):
@@ -134,6 +148,7 @@ def main(argv=None):
     env = make_brax_env(config=task_config, seed=args.seed, settle_steps=args.settle_steps)
     eval_env = make_brax_env(config=task_config, seed=args.seed + 10_000, settle_steps=args.settle_steps)
     wandb_run = init_wandb_run(args, task_config, script_name="mjx_train", sync_tensorboard=False)
+    _configure_wandb_metrics(wandb_run)
     try:
         print(
             "stage=train_start "
@@ -174,6 +189,9 @@ def main(argv=None):
         if metrics:
             final_metrics = {name: _metric_to_float(value) for name, value in metrics.items()}
             print(f"final_metrics={final_metrics}", flush=True)
+            final_step = progress_times[-1][0] if progress_times else args.steps
+            _log_final_metrics(wandb_run, final_metrics, final_step)
+            print(f"stage=wandb_metrics_logged step={final_step}", flush=True)
         try:
             render_policy_video(
                 enabled=args.final_policy_video,
