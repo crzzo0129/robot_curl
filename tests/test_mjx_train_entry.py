@@ -230,6 +230,7 @@ def test_mjx_brax_env_declares_fixed_reward_metrics():
     source = open("robot_curl_mjx/brax_env.py", encoding="utf-8").read()
 
     for metric in [
+        "reward",
         "reward_total",
         "reward_curl",
         "reward_progress",
@@ -244,6 +245,7 @@ def test_mjx_brax_env_declares_fixed_reward_metrics():
         assert f'"{metric}"' in source
 
     assert "metrics=reward_metrics" in source
+    assert '"reward": reward' in source
 
 
 def test_final_policy_video_logs_once_to_supplied_training_run(tmp_path):

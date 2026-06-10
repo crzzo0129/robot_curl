@@ -117,6 +117,7 @@ def make_brax_env(config=None, seed=0, settle_steps=0):
                 "step_count": jp.array(0, dtype=jp.int32),
             }
             reward_metrics = {
+                "reward": jp.array(0.0),
                 "reward_total": jp.array(0.0),
                 "reward_curl": jp.array(0.0),
                 "reward_progress": jp.array(0.0),
@@ -245,7 +246,7 @@ def make_brax_env(config=None, seed=0, settle_steps=0):
                 + cfg.reward_alive
                 - cfg.penalty_overcurl * overcurl
             )
-            return reward, {"reward_total": reward, **reward_metrics}
+            return reward, {"reward": reward, "reward_total": reward, **reward_metrics}
 
     # Force arrays to be JAX arrays during construction, but keep the class lazy
     # until make_brax_env is called from the training entrypoint.
