@@ -133,23 +133,32 @@ def _write_csv(path, rows):
 def _render_video(video_path, qpos_frames, width, height, fps, camera):
     """GPU 加速渲染：MuJoCo Renderer + EGL。"""
     if not qpos_frames:
+        print("WARNING: qpos_frames is empty, skipping video")
         return
+    print(f"Render start: frames={len(qpos_frames)} size={width}x{height} fps={fps} mu=GL={os.environ.get('MUJOCO_GL','unset')}", flush=True)
     try:
         import imageio.v2 as imageio
         import mujoco
+        print("imports OK", flush=True)
     except ImportError as exc:
         raise SystemExit("Video rendering requires mujoco and imageio[ffmpeg].") from exc
 
     from robot_curl_mjx.brax_env import _XML_PATH
+    print(f"model path={_XML_PATH}", flush=True)
 
     video_path = Path(video_path)
     video_path.parent.mkdir(parents=True, exist_ok=True)
+    print("loading model...", flush=True)
     model = mujoco.MjModel.from_xml_path(str(_XML_PATH))
     data = mujoco.MjData(model)
+    print("creating renderer...", flush=True)
     renderer = mujoco.Renderer(model, width=width, height=height)
+    print(f"renderer created, rendering {len(qpos_frames)} frames...", flush=True)
     pixels = []
     try:
-        for qpos in qpos_frames:
+        for i, qpos in enumerate(qpos_frames):
+            if i % 20 == 0:
+                print(f"  frame {i}/{len(qpos_frames)}", flush=True)
             if hasattr(qpos, 'qpos'):
                 q = np.asarray(qpos.qpos)
             else:
@@ -161,9 +170,11 @@ def _render_video(video_path, qpos_frames, width, height, fps, camera):
             else:
                 renderer.update_scene(data, camera=camera)
             pixels.append(renderer.render())
+        print(f"render done, {len(pixels)} frames, encoding mp4...", flush=True)
     finally:
         renderer.close()
     imageio.mimsave(video_path, pixels, fps=fps)
+    print(f"video saved: {video_path}", flush=True)
 
 
 def main(argv=None):
