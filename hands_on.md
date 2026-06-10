@@ -35,12 +35,12 @@ https://github.com/crzzo0129/robot_curl.git
 Most recent local commit at the time of this note:
 
 ```text
-3db57b6 Consolidate MJX training pipeline with WandB videos
+6ca279d Align MJX pipeline with bridge reference
 ```
 
-Important: the MJX pipeline/W&B policy-video work described below is already in
-the current local commit. Push status may still need checking from git/GitHub.
-Check local state with:
+The MJX training, W&B metrics, headless playback, and final policy video pipeline
+described below has been pushed and proven on the cloud machine. Check local
+state with:
 
 ```bash
 git status --short
@@ -78,6 +78,7 @@ robot_curl/
 Original Gymnasium/MuJoCo environment and non-MJX helpers.
 
 - `env.py`: `QuadrupedFoldEnv`, `CurlTaskConfig`, joint names, reward logic
+- `task_config.py`: shared curl task defaults and reward configuration
 - `config_args.py`: shared CLI task args
 - `wandb_utils.py`: shared W&B helpers
 - `policy_search.py`: CEM/scripted baseline search
@@ -91,8 +92,7 @@ MJX-specific work.
 - `env.py`: small stateful MJX smoke-test env
 - `brax_env.py`: Brax-compatible functional MJX env for PPO
 - `smoke_test.py`: diagnostic MJX reset/step smoke test
-- `pipeline.py`: in-progress shared pipeline helpers for cloud runtime,
-  network factory, and W&B video callbacks
+- `pipeline.py`: cloud runtime, PPO network, rollout, and video helpers
 
 ```text
 scripts/
@@ -132,6 +132,13 @@ brax                 0.14.2
 mujoco               3.9.0
 mujoco-mjx           3.9.0
 pyopengl             3.1.10
+imageio with ffmpeg support
+```
+
+The final MP4 path requires:
+
+```bash
+pip install "imageio[ffmpeg]"
 ```
 
 Cloud rendering is selected before MuJoCo is imported. On headless Linux,
@@ -206,6 +213,58 @@ Interpretation:
 - high eval reward variance means behavior is inconsistent
 - episode length near 128 suggests it is usually not immediately falling
 
+### Fully Proven Cloud Run (2026-06-10)
+
+Command:
+
+```bash
+python -m scripts.mjx_train \
+  --steps 200000 \
+  --envs 512 \
+  --num-evals 10 \
+  --wandb \
+  --wandb-project robot-curl \
+  --wandb-name mjx-curl-test
+```
+
+This run proved the complete cloud pipeline:
+
+- GPU MJX/Brax PPO training completed
+- W&B history and summary curves synced correctly
+- parameters were saved to `mjx_runs/curl_smoke/params`
+- metric history was saved to `mjx_runs/curl_smoke/metrics_history.json`
+- OSMesa rendered the final rollout after training
+- the final MP4 uploaded to the same W&B run after installing
+  `imageio[ffmpeg]`
+
+Observed timing and throughput:
+
+```text
+time_to_first_progress=178.252s
+time_after_first_progress=295.889s
+time_total=474.141s
+training/sps=41229
+```
+
+The requested 200,000 timesteps rounded up to 1,474,560 actual Brax timesteps.
+This is expected because PPO batches and evaluation intervals are aligned to
+fixed rollout boundaries.
+
+Evaluation reward was unstable:
+
+```text
+steps=0       eval_reward=-148.640
+steps=163840  eval_reward=79.535
+steps=327680  eval_reward=41.413
+...
+steps=1474560 eval_reward=-96.334
+```
+
+Interpretation: the infrastructure is now working, but the learning objective
+and training stability are not solved. The run found a much better intermediate
+policy and then lost it. Long runs must preserve the best evaluated policy
+instead of saving only the final parameters.
+
 ### Brax Metrics Bug Already Fixed
 
 Earlier error:
@@ -262,7 +321,7 @@ https://github.com/TundTT/bridge_mujoco_playground.git
 This runs in the same `mjx312` environment and follows MuJoCo Playground style:
 MJX + Brax/JAX PPO + registry/config/pipeline structure.
 
-## In-Progress W&B Video Pipeline
+## Proven W&B Video Pipeline
 
 The local pipeline changes add:
 
@@ -282,8 +341,9 @@ The training script is configured so that:
 
 - default hidden layers are `256 128 128 128`
 - default activation is `elu`
-- XLA Triton, `jax_default_matmul_precision=high`, and `MUJOCO_GL=auto` are
-  configured by the script
+- XLA Triton, persistent compilation/autotune caches,
+  `jax_default_matmul_precision=high`, and headless OSMesa are configured before
+  MuJoCo/JAX initialization
 - `ppo.train(...)` receives an explicit `network_factory`
 - `ppo.train(...)` receives `eval_env`
 - the Brax policy callback is a callable no-op, so training never renders at
@@ -297,7 +357,7 @@ The training script is configured so that:
 - W&B history uses `train_step` as an explicitly defined metric axis; progress
   and final metrics are committed before final video rendering begins
 
-The intended training command after this pipeline work is committed:
+The proven baseline command is:
 
 ```bash
 python -m scripts.mjx_train \
@@ -365,17 +425,12 @@ feature-parity with the original Gym/MuJoCo env that uses explicit qfrc PD.
 The short run improves eval reward but does not prove the robot actually curls
 in the desired tire-like posture. Always inspect video and rollout metrics.
 
-3. W&B final policy video should be cloud-tested.
+3. Only final parameters are retained.
 
-The local pipeline changes should be cloud-tested. Possible cloud failure
-points:
-
-- Brax final `make_inference_fn(params, deterministic=True)` signature
-  compatibility
-- Brax calling the no-op `policy_params_fn` with its expected three arguments
-- `make_policy(params, deterministic=True)` signature compatibility
-- OSMesa/imageio/ffmpeg availability
-- rendering speed during training
+The successful run peaked at `eval_reward=79.535` and ended at `-96.334`.
+Before spending compute on longer runs, save a checkpoint whenever evaluation
+reward reaches a new best value. Final video and playback should default to that
+best checkpoint.
 
 4. `num_timesteps` may round up.
 
@@ -396,32 +451,19 @@ Cloud verification should run actual MJX training/playback.
 
 ## Suggested Next Steps
 
-1. Commit and push the local pipeline/final-video changes once verified.
+1. Add best-evaluation checkpointing before starting a formal long run.
 
-2. On cloud, run a small W&B final-video test:
+Keep both:
 
-```bash
-python -m scripts.mjx_train \
-  --steps 10000 \
-  --envs 128 \
-  --episode-length 128 \
-  --curl-goal 0.20 \
-  --num-evals 1 \
-  --no-final-policy-video \
-  --wandb \
-  --wandb-project robot-curl \
-  --wandb-name mjx-speed-smoke
+```text
+<out>/params_final
+<out>/params_best
 ```
 
-3. Then run a small final-video test:
+Record the best step/reward in W&B and `metrics_history.json`, and render the
+final policy video from `params_best`.
 
-```bash
-python -m scripts.mjx_train ... --wandb --num-evals 2
-```
-
-This separates training correctness from rendering correctness.
-
-4. Once video works, inspect whether the robot is truly curling upright.
+2. Inspect whether the best policy is truly curling upright.
 
 Look for:
 
@@ -431,7 +473,27 @@ Look for:
 - contact count not collapsing to zero
 - no obvious reward hacking
 
-5. Start reward/curriculum cleanup.
+3. Start controlled training runs with distinct output directories and seeds.
+
+Do not overwrite `mjx_runs/curl_smoke`. Start with the same proven compute
+configuration and compare at least three seeds before changing the reward:
+
+```bash
+python -m scripts.mjx_train \
+  --steps 200000 \
+  --envs 512 \
+  --num-evals 10 \
+  --seed 0 \
+  --out mjx_runs/curl_seed0 \
+  --wandb \
+  --wandb-project robot-curl \
+  --wandb-name curl-seed0
+```
+
+Repeat with seeds 1 and 2. One run currently takes about eight minutes on the
+proven cloud GPU, including initial compilation and final evaluation/video.
+
+4. Begin reward/curriculum cleanup only after video inspection.
 
 Likely next curriculum:
 
@@ -440,7 +502,7 @@ Likely next curriculum:
 - Stage 2: increase curl goal
 - Stage 3: introduce forward rolling objective
 
-6. Longer-term architecture cleanup.
+5. Longer-term architecture cleanup.
 
 Move from ad hoc scripts toward:
 
