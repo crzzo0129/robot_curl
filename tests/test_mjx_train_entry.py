@@ -21,7 +21,8 @@ def test_mjx_train_defaults_are_gpu_smoke_sized():
     assert args.action_repeat == 1
     assert args.hidden_layers == [256, 128, 128, 128]
     assert args.activation == "elu"
-    assert args.wandb_video is True
+    assert args.train_policy_videos is False
+    assert args.final_policy_video is True
 
 
 def test_mjx_pipeline_parses_hidden_layers():

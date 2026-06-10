@@ -51,6 +51,60 @@ def make_network_factory(hidden_layers, activation):
     )
 
 
+def render_policy_video(
+    *,
+    enabled,
+    wandb_run,
+    eval_env,
+    out_dir,
+    episode_length,
+    seed,
+    width,
+    height,
+    fps,
+    camera,
+    step,
+    make_policy,
+    params,
+    video_name=None,
+    metric_prefix="policy_video",
+):
+    if not enabled:
+        return None
+
+    out_dir = Path(out_dir)
+    from scripts.mjx_playback import _render_video, _rollout_episode
+
+    import jax
+
+    try:
+        policy = make_policy(params, deterministic=True)
+    except TypeError:
+        policy = make_policy(params)
+    key = jax.random.PRNGKey(seed + int(step))
+    summary, frames = _rollout_episode(eval_env, policy, key, episode_length)
+    if video_name is None:
+        video_name = f"policy_step_{int(step):09d}.mp4"
+    video_path = out_dir / video_name
+    _render_video(video_path, frames, width, height, fps, camera)
+
+    if wandb_run is not None:
+        import wandb
+
+        wandb.log(
+            {
+                metric_prefix: wandb.Video(str(video_path), fps=fps, format="mp4"),
+                f"{metric_prefix}/step": int(step),
+                f"{metric_prefix}/max_curl": summary["max_curl"],
+                f"{metric_prefix}/min_upright": summary["min_upright"],
+                f"{metric_prefix}/total_reward": summary["total_reward"],
+                f"{metric_prefix}/mean_contacts": summary["mean_contacts"],
+            }
+        )
+    print(f"stage={metric_prefix} step={step} path={video_path}", flush=True)
+    return summary, video_path
+
+
 def make_policy_video_callback(
     *,
     enabled,
@@ -67,35 +121,24 @@ def make_policy_video_callback(
     if not enabled or wandb_run is None:
         return None
 
-    out_dir = Path(out_dir)
-
     def policy_params_fn(current_step, make_policy, params):
-        import wandb
-        from scripts.mjx_playback import _render_video, _rollout_episode
-
         try:
-            import jax
-
-            try:
-                policy = make_policy(params, deterministic=True)
-            except TypeError:
-                policy = make_policy(params)
-            key = jax.random.PRNGKey(seed + int(current_step))
-            summary, frames = _rollout_episode(eval_env, policy, key, episode_length)
-            video_path = out_dir / f"policy_step_{int(current_step):09d}.mp4"
-            _render_video(video_path, frames, width, height, fps, camera)
-            wandb.log(
-                {
-                    "policy_video": wandb.Video(str(video_path), fps=fps, format="mp4"),
-                    "policy_video/max_curl": summary["max_curl"],
-                    "policy_video/min_upright": summary["min_upright"],
-                    "policy_video/total_reward": summary["total_reward"],
-                    "policy_video/mean_contacts": summary["mean_contacts"],
-                },
-                step=int(current_step),
+            render_policy_video(
+                enabled=True,
+                wandb_run=wandb_run,
+                eval_env=eval_env,
+                out_dir=out_dir,
+                episode_length=episode_length,
+                seed=seed,
+                width=width,
+                height=height,
+                fps=fps,
+                camera=camera,
+                step=current_step,
+                make_policy=make_policy,
+                params=params,
             )
-            print(f"stage=wandb_video step={current_step} path={video_path}", flush=True)
         except Exception as exc:
-            print(f"stage=wandb_video_failed step={current_step} error={exc}", flush=True)
+            print(f"stage=policy_video_failed step={current_step} error={exc}", flush=True)
 
     return policy_params_fn

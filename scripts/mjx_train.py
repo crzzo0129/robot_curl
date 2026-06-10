@@ -9,6 +9,7 @@ from robot_curl_mjx.pipeline import (
     hidden_layers_tuple,
     make_network_factory,
     make_policy_video_callback,
+    render_policy_video,
 )
 
 
@@ -34,8 +35,11 @@ def parse_args(argv=None):
     parser.add_argument("--xla-triton", action="store_true", default=True)
     parser.add_argument("--no-xla-triton", dest="xla_triton", action="store_false")
     parser.add_argument("--mujoco-gl", default="osmesa")
-    parser.add_argument("--wandb-video", action="store_true", default=True)
-    parser.add_argument("--no-wandb-video", dest="wandb_video", action="store_false")
+    parser.add_argument("--train-policy-videos", action="store_true", default=False)
+    parser.add_argument("--wandb-video", dest="train_policy_videos", action="store_true")
+    parser.add_argument("--no-wandb-video", dest="train_policy_videos", action="store_false")
+    parser.add_argument("--final-policy-video", action="store_true", default=True)
+    parser.add_argument("--no-final-policy-video", dest="final_policy_video", action="store_false")
     parser.add_argument("--video-width", type=int, default=960)
     parser.add_argument("--video-height", type=int, default=720)
     parser.add_argument("--video-fps", type=int, default=30)
@@ -67,7 +71,8 @@ def _make_progress_fn(wandb_run):
         if wandb_run is not None:
             import wandb
 
-            wandb.log(clean_metrics, step=int(num_steps))
+            clean_metrics["train_step"] = int(num_steps)
+            wandb.log(clean_metrics)
 
     return progress
 
@@ -99,7 +104,7 @@ def main(argv=None):
             flush=True,
         )
         policy_params_fn = make_policy_video_callback(
-            enabled=args.wandb_video,
+            enabled=args.train_policy_videos,
             wandb_run=wandb_run,
             eval_env=eval_env,
             out_dir=args.out / "videos",
@@ -138,6 +143,26 @@ def main(argv=None):
         if metrics:
             final_metrics = {name: _metric_to_float(value) for name, value in metrics.items()}
             print(f"final_metrics={final_metrics}", flush=True)
+        try:
+            render_policy_video(
+                enabled=args.final_policy_video,
+                wandb_run=wandb_run,
+                eval_env=eval_env,
+                out_dir=args.out / "videos",
+                episode_length=args.episode_length,
+                seed=args.seed,
+                width=args.video_width,
+                height=args.video_height,
+                fps=args.video_fps,
+                camera=args.video_camera,
+                step=args.steps,
+                make_policy=make_inference_fn,
+                params=params,
+                video_name="final_policy.mp4",
+                metric_prefix="final_policy_video",
+            )
+        except Exception as exc:
+            print(f"stage=final_policy_video_failed error={exc}", flush=True)
         return make_inference_fn, params
     finally:
         finish_wandb_run(wandb_run)
