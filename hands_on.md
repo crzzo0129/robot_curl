@@ -134,7 +134,9 @@ mujoco-mjx           3.9.0
 pyopengl             3.1.10
 ```
 
-Cloud rendering is CPU/OSMesa. Use:
+Cloud rendering is auto-detected by the scripts. They try EGL first, then
+OSMesa, then disable rendering if neither works. To force CPU/OSMesa manually,
+use:
 
 ```bash
 MUJOCO_GL=osmesa
@@ -239,8 +241,11 @@ C:\Users\12481\Desktop\pupper\RL\pupper-local-pipeline-main\Pupper_RL_CLOUD_now.
 
 Useful patterns from that notebook:
 
-- cloud setup: `MUJOCO_GL=osmesa`
-- optional XLA Triton flag: `--xla_gpu_triton_gemm_any=True`
+- cloud setup: `MUJOCO_GL=auto`
+- XLA Triton flag: `--xla_gpu_triton_gemm_any=True`
+- JAX matmul precision: `jax_default_matmul_precision=high`
+- PPO defaults from the Pupper notebook: `unroll_length=20`,
+  `num_minibatches=32`, `num_updates_per_batch=4`, `batch_size=256`
 - explicit policy net: `(256, 128, 128, 128)` with `elu`
 - W&B config logging
 - optional Brax `policy_params_fn(current_step, make_policy, params)` for
@@ -277,7 +282,8 @@ The training script is being changed so that:
 
 - default hidden layers are `256 128 128 128`
 - default activation is `elu`
-- XLA Triton and `MUJOCO_GL=osmesa` are configured by the script
+- XLA Triton, `jax_default_matmul_precision=high`, and `MUJOCO_GL=auto` are
+  configured by the script
 - `ppo.train(...)` receives an explicit `network_factory`
 - `ppo.train(...)` receives `eval_env`
 - training-time policy videos are disabled by default because OSMesa rendering

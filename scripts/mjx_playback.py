@@ -29,7 +29,7 @@ def parse_args(argv=None):
     parser.add_argument("--camera", default=None)
     parser.add_argument("--hidden-layers", type=int, nargs="+", default=[256, 128, 128, 128])
     parser.add_argument("--activation", default="elu", choices=["relu", "tanh", "elu", "swish", "silu"])
-    parser.add_argument("--mujoco-gl", default="osmesa")
+    parser.add_argument("--mujoco-gl", default="auto")
     add_task_config_args(parser)
     parser.set_defaults(action_repeat=1, max_episode_steps=128)
     return parser.parse_args(argv)

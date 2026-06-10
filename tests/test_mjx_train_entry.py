@@ -19,9 +19,14 @@ def test_mjx_train_defaults_are_gpu_smoke_sized():
     assert args.envs == 128
     assert args.episode_length == 128
     assert args.num_eval_envs == 128
+    assert args.unroll_length == 20
+    assert args.num_minibatches == 32
     assert args.action_repeat == 1
     assert args.hidden_layers == [256, 128, 128, 128]
     assert args.activation == "elu"
+    assert args.mujoco_gl == "auto"
+    assert args.matmul_precision == "high"
+    assert args.runtime_diagnostics is True
     assert args.train_policy_videos is False
     assert args.final_policy_video is True
 
@@ -59,10 +64,19 @@ def test_mjx_pipeline_configures_cloud_runtime(monkeypatch):
 
     monkeypatch.delenv("MUJOCO_GL", raising=False)
     monkeypatch.setenv("XLA_FLAGS", "")
-    configure_cloud_runtime(xla_triton=True, mujoco_gl="osmesa")
+    configure_cloud_runtime(xla_triton=True, mujoco_gl="osmesa", matmul_precision=None)
 
     assert "xla_gpu_triton_gemm_any=True" in __import__("os").environ["XLA_FLAGS"]
     assert __import__("os").environ["MUJOCO_GL"] == "osmesa"
+
+
+def test_mjx_pipeline_configures_matmul_precision(monkeypatch):
+    from robot_curl_mjx.pipeline import configure_cloud_runtime
+
+    monkeypatch.delenv("JAX_DEFAULT_MATMUL_PRECISION", raising=False)
+    configure_cloud_runtime(xla_triton=False, mujoco_gl=None, matmul_precision="high")
+
+    assert __import__("os").environ["JAX_DEFAULT_MATMUL_PRECISION"] == "high"
 
 
 def test_mjx_playback_defaults_use_osmesa_video_path():
@@ -74,6 +88,7 @@ def test_mjx_playback_defaults_use_osmesa_video_path():
     assert args.episode_length == 128
     assert args.params == "mjx_runs/curl_smoke/params"
     assert args.video == "mjx_runs/curl_smoke/playback.mp4"
+    assert args.mujoco_gl == "auto"
 
 
 def test_mjx_brax_env_factory_imports_without_heavy_dependencies():

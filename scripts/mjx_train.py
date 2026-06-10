@@ -22,8 +22,8 @@ def parse_args(argv=None):
     parser.add_argument("--num-evals", type=int, default=5)
     parser.add_argument("--num-eval-envs", type=int, default=128)
     parser.add_argument("--batch-size", type=int, default=256)
-    parser.add_argument("--unroll-length", type=int, default=10)
-    parser.add_argument("--num-minibatches", type=int, default=4)
+    parser.add_argument("--unroll-length", type=int, default=20)
+    parser.add_argument("--num-minibatches", type=int, default=32)
     parser.add_argument("--num-updates-per-batch", type=int, default=4)
     parser.add_argument("--learning-rate", type=float, default=3e-4)
     parser.add_argument("--entropy-cost", type=float, default=1e-2)
@@ -36,7 +36,14 @@ def parse_args(argv=None):
     parser.add_argument("--activation", default="elu", choices=["relu", "tanh", "elu", "swish", "silu"])
     parser.add_argument("--xla-triton", action="store_true", default=True)
     parser.add_argument("--no-xla-triton", dest="xla_triton", action="store_false")
-    parser.add_argument("--mujoco-gl", default="osmesa")
+    parser.add_argument("--mujoco-gl", default="auto")
+    parser.add_argument(
+        "--matmul-precision",
+        default="high",
+        choices=["default", "high", "highest", "bfloat16", "tensorfloat32"],
+    )
+    parser.add_argument("--runtime-diagnostics", action="store_true", default=True)
+    parser.add_argument("--no-runtime-diagnostics", dest="runtime_diagnostics", action="store_false")
     parser.add_argument("--train-policy-videos", action="store_true", default=False)
     parser.add_argument("--wandb-video", dest="train_policy_videos", action="store_true")
     parser.add_argument("--no-wandb-video", dest="train_policy_videos", action="store_false")
@@ -105,7 +112,12 @@ def _print_timing_summary(train_start, train_end, progress_times, wandb_run):
 
 def main(argv=None):
     args = parse_args(argv)
-    configure_cloud_runtime(xla_triton=args.xla_triton, mujoco_gl=args.mujoco_gl)
+    configure_cloud_runtime(
+        xla_triton=args.xla_triton,
+        mujoco_gl=args.mujoco_gl,
+        matmul_precision=args.matmul_precision,
+        verbose=args.runtime_diagnostics,
+    )
     args.out.mkdir(parents=True, exist_ok=True)
     task_config = task_config_from_args(args)
 
