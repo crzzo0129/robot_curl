@@ -238,7 +238,7 @@ class QuadrupedFoldEnv(Env):
 
     def _curl_amount(self):
         torso_angle = self.data.qpos[self.qpos_addr["torso_hinge"]]
-        return max(0.0, float(torso_angle))
+        return max(0.0, -float(torso_angle))
 
     def _compute_reward(self, action):
         cfg = self.config

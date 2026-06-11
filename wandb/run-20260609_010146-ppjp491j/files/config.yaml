@@ -1,0 +1,273 @@
+_current_progress_remaining:
+    value: 1
+_custom_logger:
+    value: "False"
+_episode_num:
+    value: 0
+_last_episode_starts:
+    value: |-
+        [ True  True  True  True  True  True  True  True  True  True  True  True
+          True  True  True  True  True  True  True  True  True  True  True  True
+          True  True  True  True  True  True  True  True]
+_last_obs:
+    value: |-
+        [[ 0.27500817  0.18758667 -1.6229789  ...  0.          0.
+           0.        ]
+         [-1.3069537   0.3246561   1.4305269  ...  0.          0.
+           0.        ]
+         [ 1.7674264  -0.70580757 -1.5102146  ...  0.          0.
+           0.        ]
+         ...
+         [-0.4909885  -1.4523071  -0.84023476 ...  0.          0.
+           0.        ]
+         [-0.8929138   0.3670561  -0.14346154 ...  0.          0.
+           0.        ]
+         [-0.59769815  1.2236463   0.2868772  ...  0.          0.
+           0.        ]]
+_last_original_obs:
+    value: |-
+        [[-0.00252476  0.00633299 -0.25191355 ...  0.          0.
+           0.        ]
+         [-0.02656598  0.00887764 -0.2074136  ...  0.          0.
+           0.        ]
+         [ 0.02015566 -0.01025259 -0.25027019 ...  0.          0.
+           0.        ]
+         ...
+         [-0.01416568 -0.02411112 -0.24050631 ...  0.          0.
+           0.        ]
+         [-0.02027378  0.00966478 -0.23035195 ...  0.          0.
+           0.        ]
+         [-0.01578736  0.02556711 -0.22408046 ...  0.          0.
+           0.        ]]
+_logger:
+    value: <stable_baselines3.common.logger.Logger object at 0x7fbb604f3380>
+_n_updates:
+    value: 0
+_num_timesteps_at_start:
+    value: 0
+_stats_window_size:
+    value: 100
+_total_timesteps:
+    value: 2000000
+_vec_normalize_env:
+    value: <stable_baselines3.common.vec_env.vec_normalize.VecNormalize object at 0x7fbc1538b290>
+_wandb:
+    value:
+        cli_version: 0.27.0
+        e:
+            enn3400gsrdsgpdyhuo7tkdjtc7ksl6o:
+                args:
+                    - --steps
+                    - "2000000"
+                    - --envs
+                    - "32"
+                    - --device
+                    - cuda
+                    - --curl-goal
+                    - "0.20"
+                    - --wandb
+                    - --wandb-project
+                    - robot-curl
+                    - --wandb-name
+                    - cloud-curl-020
+                cpu_count: 64
+                cpu_count_logical: 128
+                cudaVersion: "12.8"
+                disk:
+                    /:
+                        total: "3838880616448"
+                        used: "2793986916352"
+                email: 1248157344@qq.com
+                executable: /inspire/hdd/project/xiongxiaobin/s26005/conda_envs/mjx312/bin/python
+                git:
+                    commit: da3b3591abbd5dfdcfcbb7d6c0183408687b2f3a
+                    remote: https://github.com/crzzo0129/robot_curl.git
+                gpu: NVIDIA GeForce RTX 4090
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Ada
+                      cudaCores: 16384
+                      memoryTotal: "51527024640"
+                      name: NVIDIA GeForce RTX 4090
+                      uuid: GPU-a923fda4-243a-3f13-a2fa-245fafd0b348
+                host: pupper--85b190676a87-ra5hfsu3ka
+                memory:
+                    total: "1081810403328"
+                os: Linux-5.15.0-141-generic-x86_64-with-glibc2.35
+                program: -m scripts.cloud_train
+                python: CPython 3.12.13
+                root: /inspire/hdd/project/xiongxiaobin/s26005/robot_curl
+                startedAt: "2026-06-09T01:01:46.672554Z"
+                writerId: enn3400gsrdsgpdyhuo7tkdjtc7ksl6o
+        m: []
+        python_version: 3.12.13
+        t:
+            "1":
+                - 1
+            "2":
+                - 1
+            "3":
+                - 2
+                - 13
+                - 16
+                - 22
+                - 35
+            "4": 3.12.13
+            "5": 0.27.0
+            "12": 0.27.0
+            "13": linux-x86_64
+action_noise:
+    value: None
+action_repeat:
+    value: 20
+action_scale:
+    value: 0.1
+action_space:
+    value: Box(-0.1, 0.1, (13,), float32)
+algo:
+    value: PPO
+batch_size:
+    value: 256
+clip_range:
+    value: FloatSchedule(ConstantSchedule(val=0.2))
+clip_range_vf:
+    value: None
+contact_cap:
+    value: 3
+curl_goal:
+    value: 0.2
+curl_tiers:
+    value:
+        - 0.1
+        - 0.2
+        - 0.3
+        - 0.4
+device:
+    value: cuda
+ent_coef:
+    value: 0.01
+env:
+    value: <stable_baselines3.common.vec_env.vec_normalize.VecNormalize object at 0x7fbc1538b290>
+envs:
+    value: 32
+ep_info_buffer:
+    value: deque([], maxlen=100)
+ep_success_buffer:
+    value: deque([], maxlen=100)
+gae_lambda:
+    value: 0.95
+gamma:
+    value: 0.99
+learning_rate:
+    value: 0.0003
+log_dir:
+    value: ppo_logs_cloud
+lr_schedule:
+    value: FloatSchedule(ConstantSchedule(val=0.0003))
+max_episode_steps:
+    value: 250
+max_grad_norm:
+    value: 0.5
+min_contacts:
+    value: 2
+mjx:
+    value: false
+n_envs:
+    value: 32
+n_epochs:
+    value: 10
+n_steps:
+    value: 2048
+normalize_advantage:
+    value: "True"
+num_timesteps:
+    value: 0
+observation_space:
+    value: Box(-inf, inf, (37,), float32)
+out:
+    value: ppo_models_cloud
+penalty_overcurl:
+    value: 3
+policy:
+    value: |-
+        ActorCriticPolicy(
+          (features_extractor): FlattenExtractor(
+            (flatten): Flatten(start_dim=1, end_dim=-1)
+          )
+          (pi_features_extractor): FlattenExtractor(
+            (flatten): Flatten(start_dim=1, end_dim=-1)
+          )
+          (vf_features_extractor): FlattenExtractor(
+            (flatten): Flatten(start_dim=1, end_dim=-1)
+          )
+          (mlp_extractor): MlpExtractor(
+            (policy_net): Sequential(
+              (0): Linear(in_features=37, out_features=64, bias=True)
+              (1): Tanh()
+              (2): Linear(in_features=64, out_features=64, bias=True)
+              (3): Tanh()
+            )
+            (value_net): Sequential(
+              (0): Linear(in_features=37, out_features=64, bias=True)
+              (1): Tanh()
+              (2): Linear(in_features=64, out_features=64, bias=True)
+              (3): Tanh()
+            )
+          )
+          (action_net): Linear(in_features=64, out_features=13, bias=True)
+          (value_net): Linear(in_features=64, out_features=1, bias=True)
+        )
+policy_class:
+    value: <class 'stable_baselines3.common.policies.ActorCriticPolicy'>
+policy_kwargs:
+    value: '{}'
+reward_alive:
+    value: 0.05
+reward_contact:
+    value: 0.15
+reward_curl:
+    value: 3
+reward_low_contact:
+    value: 0.25
+reward_progress:
+    value: 2
+reward_smooth:
+    value: 0.03
+reward_stable:
+    value: 0.02
+reward_tier:
+    value: 0.5
+reward_upright:
+    value: 4
+rollout_buffer:
+    value: <stable_baselines3.common.buffers.RolloutBuffer object at 0x7fbc153885c0>
+rollout_buffer_class:
+    value: <class 'stable_baselines3.common.buffers.RolloutBuffer'>
+rollout_buffer_kwargs:
+    value: '{}'
+script:
+    value: cloud_train
+sde_sample_freq:
+    value: -1
+seed:
+    value: None
+start_time:
+    value: 1780966914092052667
+steps:
+    value: 2000000
+target_kl:
+    value: None
+tensorboard_log:
+    value: ppo_logs_cloud
+terminate_height:
+    value: 0.05
+terminate_upright:
+    value: 0.3
+upright_threshold:
+    value: 0.9
+use_sde:
+    value: "False"
+verbose:
+    value: 1
+vf_coef:
+    value: 0.5

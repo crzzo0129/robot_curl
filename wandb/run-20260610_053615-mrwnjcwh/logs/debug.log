@@ -1,0 +1,24 @@
+2026-06-10 05:36:15,807 INFO    MainThread:2262482 [wandb_setup.py:_flush():81] Current SDK version is 0.27.0
+2026-06-10 05:36:15,807 INFO    MainThread:2262482 [wandb_setup.py:_flush():81] Configure stats pid to 2262482
+2026-06-10 05:36:15,807 INFO    MainThread:2262482 [wandb_setup.py:_flush():81] Loading settings from environment variables
+2026-06-10 05:36:15,807 INFO    MainThread:2262482 [wandb_init.py:setup_run_log_directory():723] Logging user logs to /inspire/hdd/project/xiongxiaobin/s26005/robot_curl/wandb/run-20260610_053615-mrwnjcwh/logs/debug.log
+2026-06-10 05:36:15,807 INFO    MainThread:2262482 [wandb_init.py:setup_run_log_directory():724] Logging internal logs to /inspire/hdd/project/xiongxiaobin/s26005/robot_curl/wandb/run-20260610_053615-mrwnjcwh/logs/debug-internal.log
+2026-06-10 05:36:15,807 INFO    MainThread:2262482 [wandb_init.py:init():851] calling init triggers
+2026-06-10 05:36:15,807 INFO    MainThread:2262482 [wandb_init.py:init():856] wandb.init called with sweep_config: {}
+config: {'curl_goal': 0.2, 'max_episode_steps': 128, 'action_repeat': 1, 'action_scale': 0.1, 'reward_curl': 3.0, 'reward_progress': 2.0, 'reward_tier': 0.5, 'curl_tiers': (0.1, 0.2, 0.3, 0.4), 'reward_contact': 0.15, 'reward_low_contact': 0.25, 'min_contacts': 2.0, 'contact_cap': 3.0, 'reward_smooth': 0.03, 'reward_stable': 0.02, 'reward_upright': 4.0, 'upright_threshold': 0.9, 'reward_alive': 0.05, 'penalty_overcurl': 3.0, 'terminate_upright': 0.3, 'terminate_height': 0.05, 'script': 'mjx_train', 'steps': 10000, 'seed': 0, 'envs': 128, 'episode_length': 128, 'num_evals': 1, 'num_eval_envs': 128, 'batch_size': 256, 'unroll_length': 20, 'num_minibatches': 32, 'num_updates_per_batch': 4, 'learning_rate': 0.0003, 'entropy_cost': 0.01, 'discounting': 0.97, 'reward_scaling': 1.0, 'settle_steps': 0, 'hidden_layers': [256, 128, 128, 128], 'activation': 'elu', 'xla_triton': True, 'mujoco_gl': 'auto', 'matmul_precision': 'high', 'runtime_diagnostics': True, 'final_policy_video': False, 'video_width': 320, 'video_height': 240, 'video_fps': 30, 'video_camera': None, 'out': 'mjx_runs/curl_smoke', '_wandb': {}}
+2026-06-10 05:36:15,807 INFO    MainThread:2262482 [wandb_init.py:init():899] starting backend
+2026-06-10 05:36:18,216 INFO    MainThread:2262482 [wandb_init.py:init():914] sending inform_init request
+2026-06-10 05:36:19,043 INFO    MainThread:2262482 [wandb_init.py:init():919] backend started and connected
+2026-06-10 05:36:19,045 INFO    MainThread:2262482 [wandb_init.py:init():989] updated telemetry
+2026-06-10 05:36:19,099 INFO    MainThread:2262482 [wandb_init.py:init():1012] communicating run to backend with 90.0 second timeout
+2026-06-10 05:36:19,602 INFO    MainThread:2262482 [wandb_init.py:init():1057] starting run threads in backend
+2026-06-10 05:36:22,172 INFO    MainThread:2262482 [wandb_run.py:_console_start():2509] atexit reg
+2026-06-10 05:36:22,172 INFO    MainThread:2262482 [wandb_run.py:_redirect():2359] redirect: wrap_raw
+2026-06-10 05:36:22,173 INFO    MainThread:2262482 [wandb_run.py:_redirect():2428] Wrapping output streams.
+2026-06-10 05:36:22,173 INFO    MainThread:2262482 [wandb_run.py:_redirect():2451] Redirects installed.
+2026-06-10 05:36:22,203 INFO    MainThread:2262482 [wandb_init.py:init():1095] run started, returning control to user process
+2026-06-10 05:41:12,113 INFO    MainThread:2262482 [wandb_run.py:_finish():2271] finishing run crzzo-fudan-university-school-of-management/robot-curl/mrwnjcwh
+2026-06-10 05:41:12,114 INFO    MainThread:2262482 [wandb_run.py:_atexit_cleanup():2476] got exitcode: 0
+2026-06-10 05:41:12,115 INFO    MainThread:2262482 [wandb_run.py:_restore():2458] restore
+2026-06-10 05:41:12,116 INFO    MainThread:2262482 [wandb_run.py:_restore():2464] restore done
+2026-06-10 05:41:13,855 INFO    MainThread:2262482 [wandb_run.py:_footer_sync_info():3877] logging synced files

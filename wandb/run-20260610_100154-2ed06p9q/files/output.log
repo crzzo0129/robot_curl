@@ -1,0 +1,20 @@
+stage=train_start steps=200000 envs=512 episode_length=128 action_repeat=1
+steps=0 eval_reward=-148.248
+steps=163840 eval_reward=87.094
+steps=327680 eval_reward=48.426
+steps=491520 eval_reward=4.368
+steps=655360 eval_reward=-54.784
+steps=819200 eval_reward=-31.010
+steps=983040 eval_reward=-32.549
+steps=1146880 eval_reward=10.126
+steps=1310720 eval_reward=-50.876
+steps=1474560 eval_reward=-93.724
+stage=timing first_progress_step=0 time_to_first_progress=181.216s time_after_first_progress=301.198s time_total=482.414s
+stage=metrics_saved path=mjx_runs/curl_smoke/metrics_history.json
+stage=train_done saved=mjx_runs/curl_smoke/params
+final_metrics={'eval/walltime': 271.4730999469757, 'training/sps': 41239.541349436244, 'training/walltime': 150.4270589351654, 'training/entropy_loss': -0.07667940855026245, 'training/kl_mean': 0.014815125614404678, 'training/learning_rate': 0.0003000000142492354, 'training/policy_dist_max_loc': 0.5723275542259216, 'training/policy_dist_max_std': 0.8312351107597351, 'training/policy_dist_mean_loc': 0.03227043151855469, 'training/policy_dist_mean_std': 0.6636118292808533, 'training/policy_dist_min_loc': -0.42465418577194214, 'training/policy_dist_min_std': 0.47709834575653076, 'training/policy_loss': -0.003281180514022708, 'training/total_loss': -0.07021163403987885, 'training/v_loss': 0.009748965501785278, 'eval/episode_reward': -93.7237319946289, 'eval/episode_reward_std': 89.19213104248047, 'eval/avg_episode_length': 108.6953125, 'eval/std_episode_length': 19.5893611907959, 'eval/epoch_eval_time': 2.4765465259552, 'eval/sps': 6615.664122716498}
+stage=wandb_metrics_logged step=1474560
+/inspire/hdd/project/xiongxiaobin/s26005/conda_envs/mjx312/lib/python3.12/subprocess.py:1885: RuntimeWarning: os.fork() was called. os.fork() is incompatible with multithreaded code, and JAX is multithreaded, so this will likely lead to a deadlock.
+  self.pid = _fork_exec(
+[34m[1mwandb[0m: [33mWARNING[0m `fps` argument does not affect the frame rate of the video when providing a file path or raw bytes.
+stage=final_policy_video step=200000 path=mjx_runs/curl_smoke/videos/final_policy.mp4

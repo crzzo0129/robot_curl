@@ -1,0 +1,1 @@
+{"_wandb":{"runtime":180},"_runtime":180,"eval/episode_reward_std":111.53108215332031,"train_step":0,"_step":0,"eval/episode_reward":-210.35174560546875,"eval/epoch_eval_time":118.40803742408752,"_timestamp":1.7810586171871624e+09,"eval/sps":138.36898538668822,"eval/walltime":118.40803742408752,"eval/avg_episode_length":90.5390625,"eval/std_episode_length":20.84612464904785}

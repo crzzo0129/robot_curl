@@ -97,7 +97,7 @@
 
       <!-- ====== 躯干后半段 (铰接在前半段后端) ====== -->
       <body name="torso_rear" pos="-0.125 0 0">
-        <joint name="torso_hinge" type="hinge" axis="0 1 0" range="-180 180" armature="0.01" damping="3.0"/>
+        <joint name="torso_hinge" type="hinge" axis="0 1 0" range="-180 0" armature="0.01" damping="3.0"/>
         <geom type="box" size="0.125 0.08 0.04" pos="-0.125 0 0" rgba="0.15 0.5 0.6 1"
               density="250" contype="0" conaffinity="0"/>
 

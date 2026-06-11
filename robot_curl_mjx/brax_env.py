@@ -182,7 +182,7 @@ def make_brax_env(config=None, seed=0, settle_steps=0):
             return jp.concatenate([qpos, qvel, torso_quat, torso_vel, self._foot_contacts(data)])
 
         def _curl_amount(self, data):
-            return jp.maximum(0.0, data.qpos[self.torso_qpos_index])
+            return jp.maximum(0.0, -data.qpos[self.torso_qpos_index])
 
         def _upright(self, data):
             torso_quat = data.xquat[self.torso_id]

@@ -1,0 +1,20 @@
+stage=train_start steps=200000 envs=512 episode_length=128 action_repeat=1
+steps=0 eval_reward=-149.230
+steps=163840 eval_reward=80.502
+steps=327680 eval_reward=46.134
+steps=491520 eval_reward=6.281
+steps=655360 eval_reward=-50.676
+steps=819200 eval_reward=-22.531
+steps=983040 eval_reward=-12.697
+steps=1146880 eval_reward=28.910
+steps=1310720 eval_reward=-42.065
+steps=1474560 eval_reward=-89.360
+stage=timing first_progress_step=0 time_to_first_progress=186.309s time_after_first_progress=309.344s time_total=495.653s
+stage=metrics_saved path=mjx_runs/curl_smoke/metrics_history.json
+stage=train_done saved_best=mjx_runs/curl_smoke/params_best saved_final=mjx_runs/curl_smoke/params_final best_step=163840 best_reward=80.502
+final_metrics={'eval/walltime': 278.6076774597168, 'training/sps': 41442.77981371473, 'training/walltime': 156.00893902778625, 'training/entropy_loss': -0.07662588357925415, 'training/kl_mean': 0.014989504590630531, 'training/learning_rate': 0.0003000000142492354, 'training/policy_dist_max_loc': 0.5840023756027222, 'training/policy_dist_max_std': 0.8394525051116943, 'training/policy_dist_mean_loc': 0.03739841282367706, 'training/policy_dist_mean_std': 0.6658196449279785, 'training/policy_dist_min_loc': -0.42054587602615356, 'training/policy_dist_min_std': 0.4892004728317261, 'training/policy_loss': -0.003396516665816307, 'training/total_loss': -0.07096880674362183, 'training/v_loss': 0.009053591638803482, 'eval/episode_reward': -89.36003112792969, 'eval/episode_reward_alive': 5.435159206390381, 'eval/episode_reward_contact': -23.351564407348633, 'eval/episode_reward_curl': 220.9214324951172, 'eval/episode_reward_overcurl': -182.9495849609375, 'eval/episode_reward_progress': 63.69491195678711, 'eval/episode_reward_smooth': -0.030799489468336105, 'eval/episode_reward_stable': -126.81499481201172, 'eval/episode_reward_tier': 2.0, 'eval/episode_reward_total': -89.36003112792969, 'eval/episode_reward_upright': -48.26457595825195, 'eval/episode_reward_std': 90.4927749633789, 'eval/episode_reward_alive_std': 0.9805439114570618, 'eval/episode_reward_contact_std': 23.230405807495117, 'eval/episode_reward_curl_std': 57.10865020751953, 'eval/episode_reward_overcurl_std': 86.93392181396484, 'eval/episode_reward_progress_std': 16.035930633544922, 'eval/episode_reward_smooth_std': 0.005623053293675184, 'eval/episode_reward_stable_std': 42.081180572509766, 'eval/episode_reward_tier_std': 0.0, 'eval/episode_reward_total_std': 90.4927749633789, 'eval/episode_reward_upright_std': 25.52128791809082, 'eval/avg_episode_length': 108.703125, 'eval/std_episode_length': 19.61080551147461, 'eval/epoch_eval_time': 2.45255970954895, 'eval/sps': 6680.367428450163}
+stage=wandb_metrics_logged step=1474560
+/inspire/hdd/project/xiongxiaobin/s26005/conda_envs/mjx312/lib/python3.12/subprocess.py:1885: RuntimeWarning: os.fork() was called. os.fork() is incompatible with multithreaded code, and JAX is multithreaded, so this will likely lead to a deadlock.
+  self.pid = _fork_exec(
+[34m[1mwandb[0m: [33mWARNING[0m `fps` argument does not affect the frame rate of the video when providing a file path or raw bytes.
+stage=final_policy_video step=163840 path=mjx_runs/curl_smoke/videos/final_policy.mp4

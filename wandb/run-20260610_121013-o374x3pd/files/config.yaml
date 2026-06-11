@@ -1,0 +1,189 @@
+_wandb:
+    value:
+        cli_version: 0.27.0
+        e:
+            blo6gdep40kwfaoitguk2m1mb8obamu6:
+                args:
+                    - --steps
+                    - "200000"
+                    - --envs
+                    - "512"
+                    - --num-evals
+                    - "10"
+                    - --seed
+                    - "0"
+                    - --out
+                    - mjx_runs/curl_9dof_seed0
+                    - --wandb
+                    - --wandb-project
+                    - robot-curl
+                    - --wandb-name
+                    - curl-9dof-seed0
+                cpu_count: 64
+                cpu_count_logical: 128
+                cudaVersion: "12.8"
+                disk:
+                    /:
+                        total: "3838880616448"
+                        used: "2690862219264"
+                email: 1248157344@qq.com
+                executable: /inspire/hdd/project/xiongxiaobin/s26005/conda_envs/mjx312/bin/python
+                git:
+                    commit: 51c26bb7e9149b33f15f95911d02f6ba47bf61fc
+                    remote: https://github.com/crzzo0129/robot_curl.git
+                gpu: NVIDIA GeForce RTX 4090
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Ada
+                      cudaCores: 16384
+                      memoryTotal: "51527024640"
+                      name: NVIDIA GeForce RTX 4090
+                      uuid: GPU-00efd8ce-47af-57f2-cc11-1cd1d7a678af
+                host: pupper--85b190676a87-xc53smarmo
+                memory:
+                    total: "1081541984256"
+                os: Linux-5.15.0-141-generic-x86_64-with-glibc2.35
+                program: -m scripts.mjx_train
+                python: CPython 3.12.13
+                root: /inspire/hdd/project/xiongxiaobin/s26005/robot_curl
+                startedAt: "2026-06-10T12:10:13.967062Z"
+                writerId: blo6gdep40kwfaoitguk2m1mb8obamu6
+        m:
+            - "1": train_step
+              "6":
+                - 3
+              "7": []
+            - "2": eval/*
+              "5": 1
+              "6":
+                - 1
+              "7": []
+            - "2": training/*
+              "5": 1
+              "6":
+                - 1
+              "7": []
+        python_version: 3.12.13
+        t:
+            "1":
+                - 12
+                - 45
+            "2":
+                - 12
+                - 45
+            "3":
+                - 2
+                - 7
+                - 13
+                - 16
+                - 62
+            "4": 3.12.13
+            "5": 0.27.0
+            "12": 0.27.0
+            "13": linux-x86_64
+action_repeat:
+    value: 1
+action_scale:
+    value: 0.1
+activation:
+    value: elu
+batch_size:
+    value: 256
+contact_cap:
+    value: 3
+curl_goal:
+    value: 0.45
+curl_tiers:
+    value:
+        - 0.1
+        - 0.2
+        - 0.3
+        - 0.4
+discounting:
+    value: 0.97
+entropy_cost:
+    value: 0.01
+envs:
+    value: 512
+episode_length:
+    value: 128
+final_policy_video:
+    value: true
+hidden_layers:
+    value:
+        - 256
+        - 128
+        - 128
+        - 128
+learning_rate:
+    value: 0.0003
+matmul_precision:
+    value: high
+max_episode_steps:
+    value: 128
+min_contacts:
+    value: 2
+mujoco_gl:
+    value: osmesa
+num_eval_envs:
+    value: 128
+num_evals:
+    value: 10
+num_minibatches:
+    value: 32
+num_updates_per_batch:
+    value: 4
+out:
+    value: mjx_runs/curl_9dof_seed0
+penalty_overcurl:
+    value: 10
+reward_alive:
+    value: 0.05
+reward_contact:
+    value: 0.15
+reward_curl:
+    value: 3
+reward_low_contact:
+    value: 0.25
+reward_progress:
+    value: 2
+reward_scaling:
+    value: 1
+reward_smooth:
+    value: 0.03
+reward_stable:
+    value: 0.02
+reward_tier:
+    value: 0.5
+reward_upright:
+    value: 4
+runtime_diagnostics:
+    value: true
+script:
+    value: mjx_train
+seed:
+    value: 0
+settle_steps:
+    value: 0
+steps:
+    value: 200000
+terminate_height:
+    value: 0.05
+terminate_upright:
+    value: 0.3
+unroll_length:
+    value: 20
+upright_threshold:
+    value: 0.9
+video_camera:
+    value: null
+video_fps:
+    value: 30
+video_height:
+    value: 240
+video_render_every:
+    value: 2
+video_width:
+    value: 320
+xla_triton:
+    value: true

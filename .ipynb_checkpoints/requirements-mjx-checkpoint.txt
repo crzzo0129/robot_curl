@@ -1,0 +1,10 @@
+mujoco==3.9.0
+mujoco-mjx==3.9.0
+jax==0.6.2
+jaxlib==0.6.2
+jax-cuda12-plugin==0.6.2
+jax-cuda12-pjrt==0.6.2
+flax==0.10.6
+brax==0.14.2
+numpy>=1.24
+wandb>=0.17

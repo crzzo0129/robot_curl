@@ -1,0 +1,6 @@
+stage=train_start steps=10000 envs=128 episode_length=128 action_repeat=1
+steps=163840 eval_reward=-40.445
+stage=timing first_progress_step=163840 time_to_first_progress=288.234s time_after_first_progress=1.512s time_total=289.746s
+stage=train_done saved=mjx_runs/curl_smoke/params
+final_metrics={'eval/walltime': 116.94298696517944, 'training/sps': 1444.4154394329978, 'training/walltime': 113.42997002601624, 'training/entropy_loss': -0.07650429010391235, 'training/kl_mean': 9.799047470092773, 'training/learning_rate': 0.0003000000142492354, 'training/policy_dist_max_loc': 1.9857397079467773, 'training/policy_dist_max_std': 2.246882677078247, 'training/policy_dist_mean_loc': -0.022152669727802277, 'training/policy_dist_mean_std': 0.7005975246429443, 'training/policy_dist_min_loc': -1.7495183944702148, 'training/policy_dist_min_std': 0.1893068253993988, 'training/policy_loss': 0.056121233850717545, 'training/total_loss': 11.753902435302734, 'training/v_loss': 11.774285316467285, 'eval/episode_reward': -40.4453010559082, 'eval/episode_reward_std': 123.81651306152344, 'eval/avg_episode_length': 119.171875, 'eval/std_episode_length': 13.959824562072754, 'eval/epoch_eval_time': 116.94298696517944, 'eval/sps': 140.10245868679962}
+stage=wandb_metrics_logged step=163840
