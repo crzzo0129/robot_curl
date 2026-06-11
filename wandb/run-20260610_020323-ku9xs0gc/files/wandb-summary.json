@@ -1,1 +1,0 @@
-{"eval/episode_reward":-211.5282440185547,"eval/std_episode_length":21.0049991607666,"eval/walltime":117.4470489025116,"eval/sps":139.50116374230694,"eval/episode_reward_std":115.39115905761719,"_timestamp":1.7810572304482658e+09,"_step":0,"eval/epoch_eval_time":117.4470489025116,"_wandb":{"runtime":615},"eval/avg_episode_length":90.65625,"_runtime":615}

@@ -31,4 +31,5 @@ Thumbs.db
 .vscode/
 .idea/
 
-/wandb
+wandb/
+wandb/

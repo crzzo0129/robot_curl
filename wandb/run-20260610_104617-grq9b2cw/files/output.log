@@ -1,1 +1,0 @@
-stage=train_start steps=200000 envs=512 episode_length=128 action_repeat=1
