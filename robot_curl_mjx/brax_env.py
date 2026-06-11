@@ -75,6 +75,10 @@ def make_brax_env(config=None, seed=0, settle_steps=0):
                 [0.0, -0.4, 0.2, -0.4, 0.2, 0.4, -0.2, 0.4, -0.2],
                 dtype=jp.float32,
             )
+            self.leg_fold_pose = jp.array(
+                [-1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0],
+                dtype=jp.float32,
+            )
             self.curl_tiers = jp.array(self.config.curl_tiers, dtype=jp.float32)
 
         @property
@@ -123,6 +127,7 @@ def make_brax_env(config=None, seed=0, settle_steps=0):
                 "reward_progress": jp.array(0.0),
                 "reward_tier": jp.array(0.0),
                 "reward_contact": jp.array(0.0),
+                "reward_leg_fold": jp.array(0.0),
                 "reward_smooth": jp.array(0.0),
                 "reward_stable": jp.array(0.0),
                 "reward_upright": jp.array(0.0),
@@ -158,6 +163,7 @@ def make_brax_env(config=None, seed=0, settle_steps=0):
                 torso_vel,
                 torso_angvel,
                 upright,
+                data.qpos[self.qpos_indices][1:],
             )
             done = jp.where(
                 (upright < self.config.terminate_upright)
@@ -211,6 +217,7 @@ def make_brax_env(config=None, seed=0, settle_steps=0):
             torso_vel,
             torso_angvel,
             upright,
+            leg_qpos,
         ):
             cfg = self.config
             effective_curl = jp.minimum(curl, cfg.curl_goal)
@@ -224,11 +231,14 @@ def make_brax_env(config=None, seed=0, settle_steps=0):
             r_smooth = -jp.mean(jp.square(action))
             r_stable = -0.5 * jp.sum(jp.square(torso_vel)) - 0.2 * jp.sum(jp.square(torso_angvel))
             r_upright = -cfg.reward_upright * jp.maximum(0.0, cfg.upright_threshold - upright)
+            leg_error = jp.mean(jp.square(leg_qpos - self.leg_fold_pose))
+            r_leg_fold = cfg.reward_leg_fold * jp.exp(-4.0 * leg_error)
             reward_metrics = {
                 "reward_curl": r_curl,
                 "reward_progress": r_progress,
                 "reward_tier": r_tier,
                 "reward_contact": r_contact,
+                "reward_leg_fold": r_leg_fold,
                 "reward_smooth": cfg.reward_smooth * r_smooth,
                 "reward_stable": cfg.reward_stable * r_stable,
                 "reward_upright": r_upright,
@@ -240,6 +250,7 @@ def make_brax_env(config=None, seed=0, settle_steps=0):
                 + r_progress
                 + r_tier
                 + r_contact
+                + r_leg_fold
                 + cfg.reward_smooth * r_smooth
                 + cfg.reward_stable * r_stable
                 + r_upright

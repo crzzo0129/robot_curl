@@ -40,6 +40,7 @@ class CurlTaskConfig:
     reward_upright: float = 4.0
     upright_threshold: float = 0.9
     reward_alive: float = 0.05
+    reward_leg_fold: float = 0.5
     penalty_overcurl: float = 10.0
     terminate_upright: float = 0.3
     terminate_height: float = 0.05
@@ -110,7 +111,7 @@ class QuadrupedFoldEnv(Env):
              0.4, -0.2,                 # hr
         ])
         self.fold_pose = np.array([
-             1.0,                       # torso_hinge
+            -1.0,                       # torso_hinge
             -1.0,  1.0,                 # fl
             -1.0,  1.0,                 # fr
              1.0, -1.0,                 # hl
@@ -270,6 +271,9 @@ class QuadrupedFoldEnv(Env):
         r_contact = cfg.reward_contact * min(contact_count, cfg.contact_cap) - cfg.reward_low_contact * max(0.0, cfg.min_contacts - contact_count)
 
         r_alive = cfg.reward_alive
+        leg_qpos = np.array([self.data.qpos[self.qpos_addr[name]] for name in JOINT_NAMES[1:]])
+        leg_error = np.mean(np.square(leg_qpos - self.fold_pose[1:]))
+        r_leg_fold = cfg.reward_leg_fold * np.exp(-4.0 * leg_error)
 
         reward = (
             r_curl
@@ -280,6 +284,7 @@ class QuadrupedFoldEnv(Env):
             + cfg.reward_stable * r_stable
             + r_upright
             + r_alive
+            + r_leg_fold
             - cfg.penalty_overcurl * overcurl
         )
         return reward

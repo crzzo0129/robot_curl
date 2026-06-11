@@ -1,7 +1,19 @@
 """Reward helpers shared by the MJX backend."""
+import numpy as np
 
 
-def curl_reward_terms(config, curl, init_curl, best_curl, contact_count, action_sq_mean, torso_vel_sq, torso_angvel_sq, upright):
+def curl_reward_terms(
+    config,
+    curl,
+    init_curl,
+    best_curl,
+    contact_count,
+    action_sq_mean,
+    torso_vel_sq,
+    torso_angvel_sq,
+    upright,
+    leg_error,
+):
     effective_curl = min(curl, config.curl_goal)
     curl_progress = max(0.0, effective_curl - init_curl)
     overcurl = max(0.0, curl - config.curl_goal)
@@ -20,6 +32,7 @@ def curl_reward_terms(config, curl, init_curl, best_curl, contact_count, action_
     r_smooth = -action_sq_mean
     r_stable = -0.5 * torso_vel_sq - 0.2 * torso_angvel_sq
     r_upright = -config.reward_upright * max(0.0, config.upright_threshold - upright)
+    r_leg_fold = config.reward_leg_fold * np.exp(-4.0 * leg_error)
 
     reward = (
         r_curl
@@ -29,6 +42,7 @@ def curl_reward_terms(config, curl, init_curl, best_curl, contact_count, action_
         + config.reward_smooth * r_smooth
         + config.reward_stable * r_stable
         + r_upright
+        + r_leg_fold
         + config.reward_alive
         - config.penalty_overcurl * overcurl
     )

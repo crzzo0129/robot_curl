@@ -44,6 +44,13 @@ def test_mjx_train_defaults_are_gpu_smoke_sized():
     assert args.final_policy_video is True
     assert args.video_width == 320
     assert args.video_height == 240
+    assert args.reward_leg_fold == 0.5
+
+
+def test_mjx_train_accepts_leg_fold_reward_weight():
+    from scripts.mjx_train import parse_args
+
+    assert parse_args(["--reward-leg-fold", "0.8"]).reward_leg_fold == 0.8
 
 
 def test_mjx_progress_logs_with_environment_step():
@@ -236,6 +243,7 @@ def test_mjx_brax_env_declares_fixed_reward_metrics():
         "reward_progress",
         "reward_tier",
         "reward_contact",
+        "reward_leg_fold",
         "reward_smooth",
         "reward_stable",
         "reward_upright",

@@ -65,6 +65,7 @@ class QuadrupedCurlMJXEnv:
             dtype=np.float32,
         )
         self.stand_pose = self.jp.array(self.stand_pose_np)
+        self.leg_fold_pose = self.jp.array([-1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0])
         self.jnt_low_jp = self.jp.array(self.jnt_low)
         self.jnt_high_jp = self.jp.array(self.jnt_high)
         self.kp = self.jp.array([100.0, 80.0, 60.0, 80.0, 60.0, 80.0, 60.0, 80.0, 60.0])
@@ -169,6 +170,7 @@ class QuadrupedCurlMJXEnv:
             float(self.jp.sum(self.jp.square(torso_vel))),
             float(self.jp.sum(self.jp.square(torso_angvel))),
             float(upright),
+            float(self.jp.mean(self.jp.square(self.data.qpos[self.qpos_indices][1:] - self.leg_fold_pose))),
         )
         return float(reward)
 

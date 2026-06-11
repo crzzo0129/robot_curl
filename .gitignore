@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *.pyo
 .pytest_cache/
+.ipynb_checkpoints/
 
 # Virtual environments and local packages
 .venv/
@@ -31,5 +32,4 @@ Thumbs.db
 .vscode/
 .idea/
 
-wandb/
 wandb/

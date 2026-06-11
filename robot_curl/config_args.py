@@ -17,6 +17,7 @@ def add_task_config_args(parser):
     parser.add_argument("--reward-stable", type=float, default=CurlTaskConfig.reward_stable)
     parser.add_argument("--reward-upright", type=float, default=CurlTaskConfig.reward_upright)
     parser.add_argument("--reward-alive", type=float, default=CurlTaskConfig.reward_alive)
+    parser.add_argument("--reward-leg-fold", type=float, default=CurlTaskConfig.reward_leg_fold)
     parser.add_argument("--penalty-overcurl", type=float, default=CurlTaskConfig.penalty_overcurl)
 
 
@@ -35,5 +36,6 @@ def task_config_from_args(args):
         reward_stable=args.reward_stable,
         reward_upright=args.reward_upright,
         reward_alive=args.reward_alive,
+        reward_leg_fold=args.reward_leg_fold,
         penalty_overcurl=args.penalty_overcurl,
     )

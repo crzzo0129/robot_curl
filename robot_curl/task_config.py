@@ -31,6 +31,7 @@ class CurlTaskConfig:
     reward_upright: float = 4.0
     upright_threshold: float = 0.9
     reward_alive: float = 0.05
+    reward_leg_fold: float = 0.5
     penalty_overcurl: float = 10.0
     terminate_upright: float = 0.3
     terminate_height: float = 0.05
